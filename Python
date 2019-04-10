@@ -1,0 +1,41 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Apr  6 21:42:05 2019
+
+@author: Filip.Fraczek
+"""
+
+import smtplib
+
+host = "smtp.gmail.com"
+port = 587
+username = "marianpajton@gmail.com"
+password = "pajton123"
+
+from_email = username
+to = ["marianpajton@gmail.com"]
+
+## łącze się do "serwera" wpisuje host i port
+email_conn = smtplib.SMTP(host,port)
+#Identify yourself to an ESMTP server using EHLO
+email_conn.ehlo()
+#security layer
+email_conn.starttls()
+# 'logujemy sie
+email_conn.login(username,password)
+email_conn.mail()
+email_conn.rcpt()
+# wysłanie maila
+email_conn.sendmail(from_email,to,"Siema Mordeczko")
+# zamykanie polaczenia
+email_conn.quit()
+# jesli chcemy  zeby w trakcie bledu wyskoczyl komunikat
+from smtplib import SMTP,SMTPAuthenticationError,SMTPException
+wrong_pass = SMTP(host,port)
+wrong_pass.ehlo()
+wrong_pass.starttls()
+try:
+    pass_wrong.login(username,"abc")
+    pass_wrong.sendmail(from_email,to2,"siema ziomeczek")
+except:
+    print("sorry ale zle")
