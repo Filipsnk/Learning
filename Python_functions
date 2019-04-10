@@ -1,0 +1,76 @@
+Metody w Python:
+.count() - zlicza
+.index() - podaje umiejscowienie danej liczby
+.reverse() - odwrócenie kolejności wyświetlania
+help(str) - pomoc
+.append() - dodaje nowy element do listy
+.pop() - usuwa ostatni element z listy/ .pop(1) - usuwa drugi element z listy
+słowniki oraz tupple - działają na podobnej zasadzie co listy
+isinstance("Justin",int)
+.split() to Break up string
+.lower() and .upper() to Capitalize string
+False (porównujemy czy "Justin" równa się integer)
+### Sortowanie
+zmienna.sort(key= None, reverse=True/False)
+lub
+nowa_zmienna=sorted(poprzednia_zmienna,reverse=True/False)
+
+
+##### Advanced strings
+imie= "Filip"
+"My name is {imie2}.".FORMAT(imie2=imie)
+wynik -> My name is Filip
+
+In: Ile_podnioslem=" Wczoraj podnioslem {0} kg. 
+A dzisiaj to na pewno podniose {1}. 
+To nic, ze wczoraj malo wycisnalem na klate. Niecale {2} kg".format(1,2,3)
+
+out: Wczoraj podnioslem 1 kg. A dzisiaj to na pewno podniose 2. 
+To nic, ze wczoraj malo wycisnalem na klate. Niecale 3 kg
+
+## inny sposob
+
+"hi there %s! Thanks."%("justin")
+Out[115]: 'hi there justin! Thanks.'
+
+%s jest dla string
+%x zmienia litery w cyfry
+
+########### Klasy
+class Animal():
+    name = 'Amy'
+    noise = 'Grunt'
+    size = 'Large'
+    color = 'Brown'
+    hair = 'Covers body'
+    def get_color(self,abc):
+        return self.color + ' '+abc
+    @property
+    def make_noise(self):
+        return self.noise
+
+@property sprawia że gdy przypisze np.
+Filip = Animal()
+Normalnie: Filip.make_noise()
+@property: Filip.make_noise
+
+############ Ustawianie working directory
+smtplib - biblioteka oraz email(osobna kwestia)
+import os
+print(os.getcwd()) - sprawdza working directory
+os.chdir(...) - ustawiamy wskazana sciezke danych
+
+############PANDAS
+import pandas as pd.
+pd.DataFrame()
+zmienna.loc['zmienna'] - zlokalizuj zmienna
+df = pd.read_csv(' ')
+Pliki csv nie mają w domyśle Indexu. Musimy go ustawić (Index, czyli pierwsza kolumna określająca numer wiersza)
+zmienna= pd.DataFrame(dane, index_col =0 )
+Pliki typu DF wpisywane ręcznie również mogą tego wymagać
+zmienna = pd.DataFrame(dane, index=[...,...,...])
+
+
+
+
+
