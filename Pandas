@@ -1,0 +1,83 @@
+############PANDAS
+import pandas as pd.
+pd.DataFrame()
+zmienna.loc['zmienna'] - zlokalizuj zmienna
+df = pd.read_csv(' ')
+Pliki csv nie mają w domyśle Indexu. Musimy go ustawić (Index, czyli pierwsza kolumna określająca numer wiersza)
+zmienna= pd.DataFrame(dane, index_col =0 )
+Pliki typu DF wpisywane ręcznie również mogą tego wymagać
+zmienna = pd.DataFrame(dane, index=[...,...,...])
+
+zmienna.head()
+zmienna.tail()
+zmienna.info()
+zmienna.shape - podaje ilość wierszy oraz kolumn)
+
+# kopiujemy stare dane i doklejamy
+nowa.zmienna = zmienna.append(zmienna)
+nowa.zmienna.shape -> ilość wierszy się powiekszyla
+
+#usuwamy duplikaty
+nowa.zmienna = nowa.zmienna.drop_duplicates()
+
+# inplace=TRUE -> argument ten sprawia ze nie musimy pisać "=" aby zmodyfikować nowa.zmienna
+nowa_zmienna.drop_duplicates(inplace=True)
+
+#nowym argumentem w dop_duplicates() jest keep. Wystepuje w trzech konfiguracjach
+ 	1) first - drop duplicates except for the first occurence
+	2) last - drop duplicates except for the last occurence
+	3) False - drop all duplicates
+
+#pokazyuje kolumny 
+zmienna.columns
+
+# gdy chcemy zmienić nazwy kolumn
+zmienna.rename(columns ={....}, inplace=True)
+
+# inny sposób
+zmienna.columns =[ '','',...]
+
+# gdy chcemy sprawić aby nazwy kolum były z małych liter
+zmienna.column =[col.lower() for col in zmienna]
+
+#brakujące dane. zliczanie nulli
+zmienna.isnull() -> wynikiem jest dataframe z TRUE oraz False - średniawo
+
+#zliczanie nulli
+zmienna.isnull().sum()
+
+#usuwanie nulli ale wierszach
+zmianna.dropna()
+
+# usuwanie nulli ale w kolumnach
+zmienna.droppna(axis=1)
+
+# usuwanie nulli ale zastępowanie medianą albo średnią
+#najpierw wydzielmy kolumne gdzie sa nulle
+revenue = zmiennaDataFrame['revenue_millions']
+revenue_mean=revenue.mean()
+revenue.fillna(revenue_mean,inplace=TRUE)
+
+#Powyższy przykład brał pod uwagę wszystkie zmienne.Teraz chcemy wrzucić średnią ale biorąc pod uwagę np. płec
+#summary of data
+
+zmienna['plec'].describe()
+
+#zliczanie tej katerogorii
+zmienna['plec'].value_counts().head(10)
+
+#korelacje
+zmienna.corr()
+
+#wyciaganie kolumny
+
+nowa_zmienna = dataframe['genre']
+!! typ wyciągniętych danych to SERIES nie DATAFRAME
+
+Aby poprawnie wyciągnąć kolumne jako DF
+nowa_zmienna= dataframe[['genre']]
+type(nowa_zmienna)
+
+
+
+
