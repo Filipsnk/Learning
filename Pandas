@@ -1,4 +1,12 @@
 ############PANDAS
+
+Połączenie do bazy SQL
+
+import sqlite3
+
+con = sqlite3.connect("database.db")
+df = pd.read_sql_query("SELECT * FROM purchases", con)
+##
 import pandas as pd.
 pd.DataFrame()
 zmienna.loc['zmienna'] - zlokalizuj zmienna
@@ -32,7 +40,7 @@ nowa_zmienna.drop_duplicates(inplace=True)
 zmienna.columns
 
 # gdy chcemy zmienić nazwy kolumn
-zmienna.rename(columns ={....}, inplace=True)
+zmienna.rename(columns ={'Stara nazwa':'Nowa nazwa'}, inplace=True)
 
 # inny sposób
 zmienna.columns =[ '','',...]
@@ -77,6 +85,15 @@ nowa_zmienna = dataframe['genre']
 Aby poprawnie wyciągnąć kolumne jako DF
 nowa_zmienna= dataframe[['genre']]
 type(nowa_zmienna)
+
+#dwa warunki żeby znaleźć dany element - odnośnik do IS IN 
+movies_df[movies_df['director'].isin(['Christopher Nolan', 'Ridley Scott'])].head()
+
+# tworze nowa kolumne i tworze funkcje. Uzywajac lambda nie musze pisać osobno funkcji.
+1. dane2['Wyniki']=dane2['Internet users'].apply(ranking)
+2. movies_df["rating_category"] = movies_df["rating"].apply(lambda x: 'good' if x >= 8.0 else 'bad')
+
+
 
 
 
