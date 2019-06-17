@@ -3,13 +3,23 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+#Ustalenie sciezki roboczej
+
+import os
+os.chdir('C:\\Users\Marek\\Desktop\\Python\\Kaggle\\Titanic')
 #Ignorowanie ostrzezen
 import warnings
 warnings.filterwarnings('ignore')
 
+#Literatura pomocnicza
+import webbrowser
+webbrowser.open_new('https://www.kaggle.com/ldfreeman3/a-data-science-framework-to-achieve-99-accuracy')
+
 #Wczytanie danych
 dane = pd.read_csv('train.csv')
+test = pd.read_csv('test.csv')
 
+final_data = [dane, test]
 ### Jakie kolumny mam w zbiorze danych
 
 print("Kolumny jakie sa to: \n")
