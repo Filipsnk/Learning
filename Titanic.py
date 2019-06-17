@@ -184,6 +184,12 @@ dane['Fare'] = dane['Fare'].astype(int)
 dane['Fare'].isnull().sum()
 dane = dane.dropna(axis=0, subset=['Fare'])
 
+# Usuniecie zbednych kolumn
+drop_columns = ['Age', 'Cabin', 'Embarked', 'Name', 'Ticket', 'FareBand']
+dane.drop(drop_columns, axis = 1)
+
+
+
 
 
 
