@@ -14,7 +14,10 @@ for i in range (0,len(dane.columns)):
     print(wynik, "\n")
 
 ## Sprawdzam podstawowe statystyki
+
 dane.describe()
+dane.head()
+dane.tail()
 
 ## Pokaz ile brakuje danych
 print("Ile % danych nam brakuje\n")
