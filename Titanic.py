@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jun  4 19:53:58 2019
-
-@author: Filip.Fraczek
-"""
-
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -130,13 +123,40 @@ for data in dane:
 family_survived = dane[['Family_size', 'Survived']].groupby(['Family_size'], as_index=False).mean().sort_values(by='Survived', ascending=False)
 
 # chce zmienic cene biletu w zmienna numeryczna
-        
- #Wykres pokazujacy zaleznosc miedzy przezyciem a wiekiem
-g = sns.FacetGrid(dane, col='Survived')
-g.map(plt.hist, 'Family_size', bins=20)
-       
-ax = sns.countplot(y="Survived", hue = 'Family_size', data=dane)
 
+#Wykres pokazujacy zaleznosc miedzy przezyciem a wiekiem
+#Analiza atrybutu embarked
+kto_przezyl = dane.groupby(['Survived','Embarked']).size()
+ax = sns.countplot( x = 'Embarked' , hue = 'Survived', data = dane)
+
+dane.loc[dane['Embarked'].isnull() , ].index
+
+# usuwam 2 wiersze gdzie embarked = null
+dane = dane.dropna(axis=0, subset=['Embarked'])
+
+# wrzucam dane
+dane['Embarked2'] = dane['Embarked'].map({ 'C' : 1, 'Q' : 2, 'S' : 3}).astype(int)
+
+#Analiza fare
+dane['Fare'].isnull().sum()
+# zero nulli
+dane['Fare'].dropna().median()
+
+#Sprawdzam dystrybuante
+sns.distplot(dane['Fare'])
+
+#dziele Fare na 4 rowne podzbiory
+dane['FareBand'] = pd.qcut(dane['Fare'], 4)
+
+dane.loc[dane['Fare'] <= 7.896 , 'Fare' ] = 0
+dane.loc[(dane['Fare'] > 7.896) & (dane['Fare'] <= 14.454), 'Fare' ] = 1
+dane.loc[(dane['Fare'] > 14.454) & (dane['Fare'] <= 31.0), 'Fare' ] = 2
+dane.loc[(dane['Fare'] > 31.0) & (dane['Fare'] <= 512.329), 'Fare' ] = 3
+dane.loc[(dane['Fare'] > 512.329), 'Fare'] = 4
+dane['Fare'] = dane['Fare'].astype(int)
+
+#usuwam Fareband
+dane = dane.drop(['FareBand'], axis=1)
 
 
     
