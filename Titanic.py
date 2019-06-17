@@ -16,10 +16,11 @@ import webbrowser
 webbrowser.open_new('https://www.kaggle.com/ldfreeman3/a-data-science-framework-to-achieve-99-accuracy')
 
 #Wczytanie danych
-dane = pd.read_csv('train.csv')
+train = pd.read_csv('train.csv')
 test = pd.read_csv('test.csv')
 
-final_data = [dane, test]
+dane = pd.concat((train, test)).reset_index(drop=True)
+
 ### Jakie kolumny mam w zbiorze danych
 
 print("Kolumny jakie sa to: \n")
@@ -32,6 +33,13 @@ for i in range (0,len(dane.columns)):
 dane.describe()
 dane.head()
 dane.tail()
+
+## Typy zmiennych
+
+print(dane.info()) 
+dane.describe(include = 'all') 
+
+
 
 ## Pokaz ile brakuje danych
 print("Ile % danych nam brakuje\n")
@@ -77,7 +85,8 @@ g.add_legend()
 ####### uzyway funkcje z biblioteki re czyli regular expression
 
 #Wyciagam tytul przy imieniu do nowej zmiennej 'Title'
-dane['Title'] = dane.Name.str.extract('([a-zA-Z]+)\.')
+
+    #dane['Title'] = dane.Name.str.extract('([a-zA-Z]+)\.')
 # unikalne wartosci dla kolumny Title
 dane.Title.unique()
 
