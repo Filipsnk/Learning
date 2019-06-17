@@ -3,6 +3,10 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+#Ignorowanie ostrzezen
+import warnings
+warnings.filterwarnings('ignore')
+
 #Wczytanie danych
 dane = pd.read_csv('train.csv')
 
