@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 #Ustalenie sciezki roboczej
 
 import os
-os.chdir('C:\\Users\Marek\\Desktop\\Python\\Kaggle\\Titanic')
+#os.chdir('C:\\Users\Marek\\Desktop\\Python\\Kaggle\\Titanic')
 #Ignorowanie ostrzezen
 import warnings
 warnings.filterwarnings('ignore')
@@ -86,7 +86,7 @@ g.add_legend()
 
 #Wyciagam tytul przy imieniu do nowej zmiennej 'Title'
 
-    #dane['Title'] = dane.Name.str.extract('([a-zA-Z]+)\.')
+dane['Title'] = dane.Name.str.extract('([a-zA-Z]+)\.')
 # unikalne wartosci dla kolumny Title
 dane.Title.unique()
 
@@ -181,8 +181,11 @@ dane.loc[(dane['Fare'] > 31.0) & (dane['Fare'] <= 512.329), 'Fare' ] = 3
 dane.loc[(dane['Fare'] > 512.329), 'Fare'] = 4
 dane['Fare'] = dane['Fare'].astype(int)
 
-#usuwam Fareband
-dane = dane.drop(['FareBand'], axis=1)
+dane['Fare'].isnull().sum()
+dane = dane.dropna(axis=0, subset=['Fare'])
+
+
+
 
 
     
