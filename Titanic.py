@@ -1,11 +1,10 @@
-import numpy as np
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
+#!# - tak oznaczam rzeczy, ktore zrobie pozniej (MP)
+#!!# - punkt, w ktorym skonczylem
+##### Import of the libraries #####
+
+import numpy as np,  pandas as pd, seaborn as sns, matplotlib.pyplot as plt
 from sklearn import model_selection
-from sklearn.metrics import classification_report
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -13,91 +12,86 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 
-#Ustalenie sciezki roboczej
+##### Setting working directory #####
 
 import os
-#os.chdir('C:\\Users\Marek\\Desktop\\Python\\Kaggle\\Titanic')
-#Ignorowanie ostrzezen
+
+#MM os.chdir('C:\\Users\Marek\\Desktop\\Python\\Kaggle\\Titanic')
+os.chdir('C:\\Users\\Marek.Pytka\\Desktop\\Inne szkolenia\\Dane\\titanic')
+
+##### Ignore warnings ##### 
+
 import warnings
 warnings.filterwarnings('ignore')
 
-#Literatura pomocnicza
+##### Related kernels #####
+
 import webbrowser
 webbrowser.open_new('https://www.kaggle.com/ldfreeman3/a-data-science-framework-to-achieve-99-accuracy')
 
-#Wczytanie danych
+##### Import & Concat of the data ##### 
+
 train = pd.read_csv('train.csv')
 test = pd.read_csv('test.csv')
 
 dane = pd.concat((train, test)).reset_index(drop=True)
 
-### Jakie kolumny mam w zbiorze danych
+##### Available columns in the dataset #####
 
 print("Kolumny jakie sa to: \n")
 for i in range (0,len(dane.columns)):
-    wynik = str(i) + ':' + dane.columns[i]
+    wynik = str(i) + ':' + dane.columns[i] #!# Survived ma indeks 10
     print(wynik, "\n")
 
-## Sprawdzam podstawowe statystyki
+##### Check of the basic descriptive statistics #####
 
 dane.describe()
 dane.head()
 dane.tail()
 
-## Typy zmiennych
+##### Check of the variable types #####
 
 print(dane.info()) 
 dane.describe(include = 'all') 
 
+##### Check how much data is missing #####
 
-
-## Pokaz ile brakuje danych
 print("Ile % danych nam brakuje\n")
 for i in range (0, len(dane.columns)):
     brak = np.array(dane.isnull().sum())
-    missing = dane.columns[i] + ': ' + str(round(brak[i]/len(dane),3))+'%'
+    missing = dane.columns[i] + ': ' + str(round(brak[i] * 100/len(dane),3))+'%'
     
     print(missing)
     
-## grupowanie przy pomocy płci
+#!# -> wykres slupkowy z procentem missing Data
+
+##### Grouping Survived by Sex #####
+
 dane[['Sex','Survived']].groupby(['Sex'], as_index = True).mean().sort_values( by= 'Survived', ascending = False)
-# grupowanie przy pomocy klasy
+
+##### Grouping Survived by PClass #####
+
 dane[['Pclass','Survived']].groupby(['Pclass'], as_index = True).mean().sort_values( by= 'Survived', ascending = False)
 
-# Używam facetgrid aby narysować wykres z zależnościami 
-# Set up a factorplot z biblioteki seaborn # rodzaje {point, bar, count, box, violin, strip}
+##### Dependence Survived ~ Sex & PClass (Factorplot) #####
+
 g = sns.factorplot("Sex","Survived", hue = "Pclass", data=dane, kind="bar", palette="muted", legend=True)
 
-#Wykres pokazujacy zaleznosc miedzy przezyciem a wiekiem
+##### Dependence Survived ~ Age (FacetGrid) #####
+
 g = sns.FacetGrid(dane, col='Survived')
 g.map(plt.hist, 'Age', bins=20)
 
-#wykres pokazujacy przezycie w zaleznosci od klasy i wieku
+##### Dependence Survived ~ PClass & Age (on separate FacetGrids) #####
+
 g = sns.FacetGrid(dane, col = 'Survived' , row = 'Pclass')
 g.map(plt.hist, 'Age')
 g.add_legend()
 
-# Wyciągam tytul z imienia
-# niestety ale ta funkcja jest bezuzyteczna gdyz w indexie = 18 mamy osobe ktora ma 2 imiona
-#string = dane.Name.str.split()
-#tytul = list(string)
 
-#zmienna = []
-#for i in range(0, len(tytul)):
-#    wynik = tytul[i][1]
-#    zmienna.append(wynik)
-
-#zmienna = [word.replace('.','') for word in zmienna]
-#dane['Title'] = zmienna
-
-
-
-####### uzyway funkcje z biblioteki re czyli regular expression
-
-#Wyciagam tytul przy imieniu do nowej zmiennej 'Title'
+##### Extract Title from Name & Check + replace of rare titles #####
 
 dane['Title'] = dane.Name.str.extract('([a-zA-Z]+)\.')
-# unikalne wartosci dla kolumny Title
 dane.Title.unique()
 
 for name in dane:
@@ -107,29 +101,31 @@ for name in dane:
 
 dane.Title.unique()
 
-# zamieniam tekst w int
+##### Convert titles to int datatype #####
+
 dane.loc[dane.Title == "Mr", 'Title'] = int(0)
 dane.loc[dane.Title == "Mrs", 'Title'] = int(4)
 dane.loc[dane.Title == "Miss", 'Title'] = int(3)
 dane.loc[dane.Title == "Rare", 'Title'] = int(1)
 dane.loc[dane.Title == "Master", 'Title'] = int(2)
 
-#zamieniam male i female na int
+##### Convert Sex categories into int datatype #####
 
 dane['Sex'] = dane['Sex'].apply(lambda x: int(1) if x == "male" else 0)
 
-# tworze kolumne czy ma wiek
+##### New column with info if a person has age (1) or not (0) #####
+
 dane['Has_age'] = dane['Age'].apply(lambda x: 0 if str(x) == 'nan' else 1)
 
-# wykres pokazujacy ile osob ma wiek w zaleznosci od klasy
+#### Chart -> people with age available ~ PClass #####
 
 sns.set(style="darkgrid")
 ax = sns.countplot(x="Pclass", hue = 'Has_age', data=dane)
 ax.set_title("Ile osob ma podany wiek w zaleznosci od klasy")
 
-# Korelacje
-korelacja = dane.corr(method='pearson')
+#### Variables' correlation chart #####
 
+korelacja = dane.corr(method='pearson')
 corr = dane.corr()
 ax = sns.heatmap(
     corr, 
@@ -137,42 +133,46 @@ ax = sns.heatmap(
     cmap=sns.diverging_palette(20, 220, n=200),
     square=True)
 
+#!# Top 5 zmiennych z najwieksza korelacja
 
-# Tworze tabele przestawna
+##### Pivot table with PClass & Title #####
 
 Pclass_title_pred = pd.pivot_table(data=dane,values='Age', index = ['Pclass'],columns = ['Title'],aggfunc = np.median).values
 
 dane['Has_age'] = dane['Age']
 
-#Uzupelniam zmienna 'Has_Age' mediana z kolumny przestawnej.
+##### Filling in NA values in Has_Age with respective medians #####
+
 for i in range(0,5):
     for j in range(1,4):
         dane.loc[(dane.Age.isnull()) & (dane.Title == i) & (dane.Pclass == j),'Has_age'] = Pclass_title_pred[j-1,i]
 
 
-# wielkosc rodziny
+##### New Feature: Family Size #####
 
 for data in dane:
     dane['Family_size'] = dane['SibSp'] + dane['Parch'] +1
     
-# jak wielkosc rodziny wplywa na przezycie
+##### Dependence between Family Size and probability of survival #####
+
 family_survived = dane[['Family_size', 'Survived']].groupby(['Family_size'], as_index=False).mean().sort_values(by='Survived', ascending=False)
 
-# chce zmienic cene biletu w zmienna numeryczna
+##### Survived ~ Embarked #####
 
-#Wykres pokazujacy zaleznosc miedzy przezyciem a wiekiem
-#Analiza atrybutu embarked
 kto_przezyl = dane.groupby(['Survived','Embarked']).size()
 ax = sns.countplot( x = 'Embarked' , hue = 'Survived', data = dane)
 
 dane.loc[dane['Embarked'].isnull() , ].index
 
-# usuwam 2 wiersze gdzie embarked = null
+##### Delete rows with Embarked = NA #####
+
 dane = dane.dropna(axis=0, subset=['Embarked'])
 
-# wrzucam dane
+##### Mapping integers to Embarked variable ######
+
 dane['Embarked2'] = dane['Embarked'].map({ 'C' : 1, 'Q' : 2, 'S' : 3}).astype(int)
 
+#!!# 
 #Analiza fare
 dane['Fare'].isnull().sum()
 # zero nulli
@@ -233,6 +233,26 @@ for name, model in models:
     print(msg)
 
 
+##### BRUDNOPIS ##### 
+    
+    
+# Wyciągam tytul z imienia
+# niestety ale ta funkcja jest bezuzyteczna gdyz w indexie = 18 mamy osobe ktora ma 2 imiona
+#string = dane.Name.str.split()
+#tytul = list(string)
 
+#zmienna = []
+#for i in range(0, len(tytul)):
+#    wynik = tytul[i][1]
+#    zmienna.append(wynik)
+
+#zmienna = [word.replace('.','') for word in zmienna]
+#dane['Title'] = zmienna
+
+
+
+####### uzyway funkcje z biblioteki re czyli regular expression
+
+#Wyciagam tytul przy imieniu do nowej zmiennej 'Title'
     
 
