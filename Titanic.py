@@ -1,5 +1,6 @@
 #!# - tak oznaczam rzeczy, ktore zrobie pozniej (MP)
 #!!# - punkt, w ktorym skonczylem
+
 ##### Import of the libraries #####
 
 import numpy as np,  pandas as pd, seaborn as sns, matplotlib.pyplot as plt
@@ -21,8 +22,8 @@ from sklearn.model_selection import GridSearchCV
 
 import os
 
-#MM os.chdir('C:\\Users\Marek\\Desktop\\Python\\Kaggle\\Titanic')
-os.chdir('C:\\Users\\Marek.Pytka\\Desktop\\Inne szkolenia\\Dane\\titanic')
+os.chdir('C:\\Users\Marek\\Desktop\\Python\\Kaggle\\Titanic')
+##MP os.chdir('C:\\Users\\Marek.Pytka\\Desktop\\Inne szkolenia\\Dane\\titanic')
 
 ##### Ignore warnings ##### 
 
@@ -36,7 +37,7 @@ webbrowser.open_new('https://www.kaggle.com/ldfreeman3/a-data-science-framework-
 
 ##### Import & Concat of the data ##### 
 
-dane = pd.read_csv('train.csv')
+train = pd.read_csv('train.csv') #!# musi byc nazwa 'train', 'dane' mamy do zbioru 'train' + 'test'
 test = pd.read_csv('test.csv')
 
 dane = pd.concat((train, test)).reset_index(drop=True)
@@ -138,7 +139,13 @@ ax = sns.heatmap(
     cmap=sns.diverging_palette(20, 220, n=200),
     square=True)
 
-#!# Top 5 zmiennych z najwieksza korelacja
+##### Top 5 highest correlations #####
+
+corr = corr.mask(np.tril(np.ones(corr.shape)).astype(np.bool))
+corr_sort = corr.unstack()
+corr_sort = corr_sort.dropna(axis = 0)
+corr_sort = corr_sort.sort_values(kind = 'quicksort')
+abs(corr_sort).sort_values(kind='quicksort', ascending = False)
 
 ##### Pivot table with PClass & Title #####
 
@@ -151,7 +158,6 @@ dane['Has_age'] = dane['Age']
 for i in range(0,5):
     for j in range(1,4):
         dane.loc[(dane.Age.isnull()) & (dane.Title == i) & (dane.Pclass == j),'Has_age'] = Pclass_title_pred[j-1,i]
-
 
 ##### New Feature: Family Size #####
 
@@ -177,48 +183,40 @@ dane = dane.dropna(axis=0, subset=['Embarked'])
 
 dane['Embarked2'] = dane['Embarked'].map({ 'C' : 1, 'Q' : 2, 'S' : 3}).astype(int)
 
-#!!# 
-#Analiza fare
-dane['Fare'].isnull().sum()
-# zero nulli
-dane['Fare'].dropna().median()
+##### Clear dataset by dropping NULL Fare #####
 
-#usuwam wiersz gdzie fare jest null
+dane['Fare'].isnull().sum()
+dane['Fare'].dropna().median()
 dane = dane.dropna(axis=0, subset=['Fare'])
 
-#Sprawdzam dystrybuante
-sns.distplot(dane['Fare'])
+##### Splitting Fare into 5 subsets #####
 
-#dziele Fare na 4 rowne podzbiory
+sns.distplot(dane['Fare']) #!# drobna sugestia - nazwa jest distplot, a tu mamy rozklad gestosci, dystrybuanta by rosla az do y = 1
+
 dane['FareBand'] = pd.qcut(dane['Fare'], 4)
-
 dane.loc[dane['Fare'] <= 7.896 , 'Fare' ] = 0
 dane.loc[(dane['Fare'] > 7.896) & (dane['Fare'] <= 14.454), 'Fare' ] = 1
 dane.loc[(dane['Fare'] > 14.454) & (dane['Fare'] <= 31.0), 'Fare' ] = 2
 dane.loc[(dane['Fare'] > 31.0) & (dane['Fare'] <= 512.329), 'Fare' ] = 3
 dane.loc[(dane['Fare'] > 512.329), 'Fare'] = 4
-dane['Fare'] = dane['Fare'].astype(int)
 
+dane['Fare'] = dane['Fare'].astype(int)
 dane['Fare'].isnull().sum()
 
-# Usuniecie zbednych kolumn
+#####  Dropping unnecessary columns ##### 
+
 drop_columns = ['Age', 'Cabin', 'Embarked', 'Name', 'Ticket', 'FareBand','PassengerId']
 dane = dane.drop(drop_columns, axis = 1)
-
-
 
 X = dane.loc[:, dane.columns != 'Survived'].values
 y = dane.iloc[:,0].values.astype(int)
 
+##### Preparation for modelling #####
 
-#Splitting Dataset
 from sklearn.model_selection import train_test_split
 X_train,X_test,y_train,y_test = train_test_split(X ,y,test_size = 0.2, random_state= 10)
 
-
-X_train[np.isnan(X_train).any(axis=1)].shape
-
-# building models
+##### Building Models #####
 
 models = []
 models.append(('LR', LogisticRegression(solver='liblinear', multi_class='ovr')))
@@ -238,28 +236,31 @@ for name, model in models:
     print(msg)
 
 # Single models
+
 # KNN 
-knn = KNeighborsClassifier(n_neighbors=3)
+knn = KNeighborsClassifier(n_neighbors=3, n_jobs = -1) #!# do optymalizacji parametry: n_neighbors (2,7), weights (uniform, distance), algorithm (auto, ball_tree, kd_tree, brute)
 knn.fit(X_train, y_train)
 Y_pred = knn.predict(X_test)
 acc_knn = round(knn.score(X_train, y_train) * 100, 2)
 
-# Random Forest
+# Confusion Matrix for KNN
 
-random = RandomForestClassifier( n_estimators = 20, max_depth = 10, random_state = 0)
+knn_cm = confusion_matrix(y_test,Y_pred)
+performance = int(round((knn_cm[0][0] + knn_cm[1][1]) / len(y_test),2) *100)
+print('Performance KNN wynosi :', performance,'%')
+
+# Random Forest
+random = RandomForestClassifier(n_estimators = 20, max_depth = 10, random_state = 0, n_jobs = -1) #!# do optymalizacji: n_estimators, criterion, max_depth (?)  
 classifier = random.fit(X_train, y_train)
 predict = random.predict(X_test)
 
-#Confusion Matrix
-confusion_matrix = confusion_matrix(y_test,predict)
-performance = int(round((confusion_matrix[0][0] + confusion_matrix[1][1]) / len(y_test),2) *100)
-print('Performance wynosi :', performance,'%')
+#Confusion Matrix for Random Forest 
+rf_cm = confusion_matrix(y_test,predict)
+performance = int(round((rf_cm[0][0] + rf_cm[1][1]) / len(y_test),2) *100) #!# unikajmy nazywania obiektow jak funkcje/metody (confusion_matrix)
+print('Performance RF wynosi :', performance,'%')
 
-# Grid Search dla Random Forrest
+# Grid Search for Random Forest
 
-# Applying Grid Search to find the best model and the best parameters
-
-# selecting randomly selected numbers
 n_estimators = [int(x) for x in np.linspace(1,1000,10, endpoint = False)]
 max_depth = [int(x) for x in np.linspace(1,100,10, endpoint = False)]
 
@@ -267,7 +268,6 @@ parameters = {'n_estimators' : n_estimators,
               'criterion' : ['gini','entropy'],
               'max_depth' : max_depth}
 
-print(parameters)
 grid_search = GridSearchCV(estimator = classifier,
                            param_grid = parameters,
                            scoring = 'accuracy',
@@ -277,6 +277,8 @@ grid_search = GridSearchCV(estimator = classifier,
 grid_search_fit = grid_search.fit(X_train,y_train)
 best_accuracy = grid_search.best_score_
 best_parameters = grid_search.best_params_
+
+
 
 ##### BRUDNOPIS ##### 
     
@@ -294,10 +296,9 @@ best_parameters = grid_search.best_params_
 #zmienna = [word.replace('.','') for word in zmienna]
 #dane['Title'] = zmienna
 
-
-
 ####### uzyway funkcje z biblioteki re czyli regular expression
 
 #Wyciagam tytul przy imieniu do nowej zmiennej 'Title'
     
+#X_train[np.isnan(X_train).any(axis=1)].shape
 
