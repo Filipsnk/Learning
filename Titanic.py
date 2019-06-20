@@ -11,6 +11,11 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import GridSearchCV
+
+
 
 ##### Setting working directory #####
 
@@ -31,7 +36,7 @@ webbrowser.open_new('https://www.kaggle.com/ldfreeman3/a-data-science-framework-
 
 ##### Import & Concat of the data ##### 
 
-train = pd.read_csv('train.csv')
+dane = pd.read_csv('train.csv')
 test = pd.read_csv('test.csv')
 
 dane = pd.concat((train, test)).reset_index(drop=True)
@@ -178,6 +183,9 @@ dane['Fare'].isnull().sum()
 # zero nulli
 dane['Fare'].dropna().median()
 
+#usuwam wiersz gdzie fare jest null
+dane = dane.dropna(axis=0, subset=['Fare'])
+
 #Sprawdzam dystrybuante
 sns.distplot(dane['Fare'])
 
@@ -192,23 +200,20 @@ dane.loc[(dane['Fare'] > 512.329), 'Fare'] = 4
 dane['Fare'] = dane['Fare'].astype(int)
 
 dane['Fare'].isnull().sum()
-dane = dane.dropna(axis=0, subset=['Fare'])
 
 # Usuniecie zbednych kolumn
 drop_columns = ['Age', 'Cabin', 'Embarked', 'Name', 'Ticket', 'FareBand','PassengerId']
 dane = dane.drop(drop_columns, axis = 1)
 
 
+
 X = dane.loc[:, dane.columns != 'Survived'].values
-y = dane.iloc[:,5].values.astype(int)
+y = dane.iloc[:,0].values.astype(int)
 
 
 #Splitting Dataset
 from sklearn.model_selection import train_test_split
-X_train,X_test,y_train,y_test = train_test_split(X ,y,test_size = 1/3, random_state= 10)
-
-
-np.unique(y_train[0])
+X_train,X_test,y_train,y_test = train_test_split(X ,y,test_size = 0.2, random_state= 10)
 
 
 X_train[np.isnan(X_train).any(axis=1)].shape
@@ -232,6 +237,46 @@ for name, model in models:
     msg= "%s: %f (%f)" % (name, cv_results.mean(),cv_results.std())
     print(msg)
 
+# Single models
+# KNN 
+knn = KNeighborsClassifier(n_neighbors=3)
+knn.fit(X_train, y_train)
+Y_pred = knn.predict(X_test)
+acc_knn = round(knn.score(X_train, y_train) * 100, 2)
+
+# Random Forest
+
+random = RandomForestClassifier( n_estimators = 20, max_depth = 10, random_state = 0)
+classifier = random.fit(X_train, y_train)
+predict = random.predict(X_test)
+
+#Confusion Matrix
+confusion_matrix = confusion_matrix(y_test,predict)
+performance = int(round((confusion_matrix[0][0] + confusion_matrix[1][1]) / len(y_test),2) *100)
+print('Performance wynosi :', performance,'%')
+
+# Grid Search dla Random Forrest
+
+# Applying Grid Search to find the best model and the best parameters
+
+# selecting randomly selected numbers
+n_estimators = [int(x) for x in np.linspace(1,1000,10, endpoint = False)]
+max_depth = [int(x) for x in np.linspace(1,100,10, endpoint = False)]
+
+parameters = {'n_estimators' : n_estimators,
+              'criterion' : ['gini','entropy'],
+              'max_depth' : max_depth}
+
+print(parameters)
+grid_search = GridSearchCV(estimator = classifier,
+                           param_grid = parameters,
+                           scoring = 'accuracy',
+                           cv = 10,
+                           n_jobs = -1)
+
+grid_search_fit = grid_search.fit(X_train,y_train)
+best_accuracy = grid_search.best_score_
+best_parameters = grid_search.best_params_
 
 ##### BRUDNOPIS ##### 
     
