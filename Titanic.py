@@ -14,16 +14,15 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import GridSearchCV
-
+from sklearn.model_selection import GridSearchCV, cross_val_score 
 
 
 ##### Setting working directory #####
 
 import os
 
-os.chdir('C:\\Users\Marek\\Desktop\\Python\\Kaggle\\Titanic')
-##MP os.chdir('C:\\Users\\Marek.Pytka\\Desktop\\Inne szkolenia\\Dane\\titanic')
+##os.chdir('C:\\Users\Marek\\Desktop\\Python\\Kaggle\\Titanic')
+os.chdir('C:\\Users\\Marek.Pytka\\Desktop\\Inne szkolenia\\Dane\\titanic')
 
 ##### Ignore warnings ##### 
 
