@@ -1,7 +1,18 @@
 ######### Import bibliotek ##########
 
-from sklearn.model_selection import GridSearchCV, cross_val_score
+import numpy as np,  pandas as pd, seaborn as sns, matplotlib.pyplot as plt
+from sklearn import model_selection
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.naive_bayes import GaussianNB
+from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import GridSearchCV, cross_val_score 
+
 
 ########## Dopasowanie algorytmu SVR wraz z ##########
 ########## petla optymalizujaca Grid Search ##########
@@ -22,12 +33,14 @@ parameters_knn = {'n_neighbors': n_neighbors,
 ######### Optymalizowane parametry #########
 
 
-def OptimizedGridSearch(object_name, parameters_set): #!# dorzucic CV
+def OptimizedGridSearch(object_name, parameters_set, X_train, y_train, X_test, y_test): #!# dorzucic CV
     ## object_name, np. RandomForestClassifier
     ## parameters - slownik z parametrami do optymalizacji
 
-    syntax = 'opt_object = ' + object_name + '()'
-    
+    syntax = str(object_name)
+#    code = compile(syntax, '<string>', 'exec')
+#    exec(code)
+    opt_object = object_name
     ######### Optymalizowane parametry - slownik #########
     
     parameters = parameters_set
@@ -39,8 +52,7 @@ def OptimizedGridSearch(object_name, parameters_set): #!# dorzucic CV
     
     oceny = [] # lista z ocenami poszczegolnych modeli
     total_time = 0 
-    
-    exec(syntax) 
+     
     opt_object.fit(X_train,y_train) 
     
     accuracies = cross_val_score(estimator = opt_object, X = X_test, y = y_test, cv = 3, n_jobs = -1) 
@@ -96,8 +108,8 @@ def OptimizedGridSearch(object_name, parameters_set): #!# dorzucic CV
         else:
             syntax = syntax.replace(')',',') + str(new_parameter) + ')'
         
-        syntax
-        exec(syntax) 
+        syntax_loop = compile(syntax, '<string>', 'exec')
+        exec(syntax_loop) 
     
         opt_object.fit(X_train,y_train) 
     
@@ -109,6 +121,5 @@ def OptimizedGridSearch(object_name, parameters_set): #!# dorzucic CV
 
     return summary
 
-opt_object = KNeighborsClassifier()
 
-OptimizedGridSearch('KNeighborsClassifier', parameters_knn)
+#OptimizedGridSearch('KNeighborsClassifier', parameters_knn)

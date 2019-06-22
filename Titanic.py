@@ -15,14 +15,12 @@ from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import GridSearchCV, cross_val_score 
-
-
-##### Setting working directory #####
+from ZajebisteFunkcje import OptGridSearch
 
 import os
 
-##os.chdir('C:\\Users\Marek\\Desktop\\Python\\Kaggle\\Titanic')
-os.chdir('C:\\Users\\Marek.Pytka\\Desktop\\Inne szkolenia\\Dane\\titanic')
+os.chdir('C:\\Users\Marek\\Desktop\\Python\\Kaggle\\Titanic')
+os##.chdir('C:\\Users\\Marek.Pytka\\Desktop\\Inne szkolenia\\Dane\\titanic')
 
 ##### Ignore warnings ##### 
 
@@ -258,6 +256,7 @@ rf_cm = confusion_matrix(y_test,predict)
 performance = int(round((rf_cm[0][0] + rf_cm[1][1]) / len(y_test),2) *100) #!# unikajmy nazywania obiektow jak funkcje/metody (confusion_matrix)
 print('Performance RF wynosi :', performance,'%')
 
+
 # Grid Search for Random Forest
 
 n_estimators = [int(x) for x in np.linspace(1,1000,10, endpoint = False)]
@@ -266,6 +265,8 @@ max_depth = [int(x) for x in np.linspace(1,100,10, endpoint = False)]
 parameters = {'n_estimators' : n_estimators,
               'criterion' : ['gini','entropy'],
               'max_depth' : max_depth}
+
+OptGridSearch.OptimizedGridSearch(RandomForestClassifier(), parameters, X_train, y_train, X_test, y_test)
 
 grid_search = GridSearchCV(estimator = classifier,
                            param_grid = parameters,

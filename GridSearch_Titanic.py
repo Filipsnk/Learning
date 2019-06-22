@@ -2,7 +2,7 @@
 
 from sklearn.model_selection import GridSearchCV, cross_val_score
 from sklearn.ensemble import RandomForestClassifier
-
+from ZajebisteFunkcje import OptGridSearch
 ########## Dopasowanie algorytmu SVR wraz z ##########
 ########## petla optymalizujaca Grid Search ##########
 
