@@ -18,7 +18,8 @@ from sklearn.model_selection import GridSearchCV, cross_val_score
 from ZajebisteFunkcje import OptGridSearch
 
 import os
-
+#### DO SKASOWANIA #### 
+os.chdir('C:\\Users\\Marek\\Desktop\\Python\\Github\\Learning')
 os.chdir('C:\\Users\Marek\\Desktop\\Python\\Kaggle\\Titanic')
 os##.chdir('C:\\Users\\Marek.Pytka\\Desktop\\Inne szkolenia\\Dane\\titanic')
 
@@ -62,8 +63,7 @@ dane.describe(include = 'all')
 print("Ile % danych nam brakuje\n")
 for i in range (0, len(dane.columns)):
     brak = np.array(dane.isnull().sum())
-    missing = dane.columns[i] + ': ' + str(round(brak[i] * 100/len(dane),3))+'%'
-    
+    missing = dane.columns[i] + ': ' + str(round(brak[i] * 100/len(dane),3))+'%'    
     print(missing)
     
 #!# -> wykres slupkowy z procentem missing Data
@@ -127,7 +127,7 @@ ax = sns.countplot(x="Pclass", hue = 'Has_age', data=dane)
 ax.set_title("Ile osob ma podany wiek w zaleznosci od klasy")
 
 #### Variables' correlation chart #####
-
+#!# - czelencz - optymalizacja
 korelacja = dane.corr(method='pearson')
 corr = dane.corr()
 ax = sns.heatmap(
