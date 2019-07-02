@@ -4,12 +4,13 @@
 # Tworzenie funkcji do zastepowania (zeby moc wdrozyc na zbiorze uczacym i testowym)
 # Unskew dataset - pozbawianie skosnosci#
 # np.where
+# Zapis alpha do modelu
 
 ##### Import of the libraries #####
 import time
 import numpy as np,  pandas as pd, seaborn as sns, matplotlib.pyplot as plt
 from sklearn import model_selection
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler, MaxAbsScaler
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.tree import DecisionTreeClassifier
@@ -19,8 +20,12 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split
+from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split, RepeatedKFold, KFold
 import scipy as sp
+from sklearn.linear_model import (ElasticNet, ElasticNetCV, Lasso, LassoCV, 
+                                  LinearRegression, Perceptron)
+from sklearn.externals import joblib
+
 ##### Setting working directory #####
 
 import os
@@ -77,8 +82,8 @@ def get_replacement(data):
 ##### Available columns in the dataset #####
 
 print("Available columns: \n")
-for i in range (0,len(dane.columns)):
-    wynik = str(i) + ':' + dane.columns[i] 
+for i in range (0,len(import_data.columns)):
+    wynik = str(i) + ':' + import_data.columns[i] 
     print(wynik)
 
 ##### Predicted candidates for the regression ##### 
@@ -316,6 +321,54 @@ train_dummies = pd.get_dummies(train, columns=categorical_vars,
                                     drop_first=True, sparse=False)
 test_dummies = pd.get_dummies(test, columns=categorical_vars, 
                                  drop_first=True, sparse=False)
+
+
+##### Transform dummies #####
+
+label_enc = LabelEncoder()
+# fit on the concatenated train and test sets to get the same encoding 
+# for them both
+for var in categorical_vars:
+    var_all = pd.concat([train.loc[:, var], test.loc[:, var]])
+    label_enc.fit(var_all)
+    train.loc[:, var] = label_enc.transform(train.loc[:, var])
+    test.loc[:, var] = label_enc.transform(test.loc[:, var])
+
+##### Standaryzacja zmiennych #####
+    
+scaler = StandardScaler()
+
+train[:] = scaler.fit_transform(train)
+train_dummies[:] = scaler.fit_transform(train_dummies)
+test[:] = scaler.fit_transform(test)
+test_dummies[:] = scaler.fit_transform(test_dummies)
+
+
+rkf_cv = KFold(n_splits=5, random_state=RNG_SEED)
+stack_folds = list(KFold(n_splits=5, random_state=RNG_SEED).split(train))
+
+##### Penalized linear regression #####
+
+l1_ratios = [.1, .5, .7, .9, .95, .99, 1]
+alphas = alphas=[1] + [10 ** -x for x in range(1, 8)] + [5 * 10 ** -x for x in range(1, 8)]
+
+overwrite_models = True
+
+if not os.path.isfile("cv_opt_en.pkl") or overwrite_models:
+    en_cv = ElasticNetCV(l1_ratio=l1_ratios, alphas=alphas,
+                         normalize=True, selection ="random", random_state=RNG_SEED,
+                         max_iter=10000, cv=RepeatedKFold(10, 3, random_state=RNG_SEED))
+    cv_opt_en = en_cv.fit(train, y)
+    joblib.dump(cv_opt_en, "cv_opt_en.pkl")
+else:
+    cv_opt_en = joblib.load("cv_opt_en.pkl")
+
+# cross-validated rmse for the best parameters
+l1_ratio_index = np.where(l1_ratios == cv_opt_en.l1_ratio_)[0][0]
+en_alpha_index = np.where(cv_opt_en.alphas_ == cv_opt_en.alpha_)[0][0]
+en_rmse = np.sqrt(np.mean(cv_opt_en.mse_path_, axis=2)[l1_ratio_index, en_alpha_index])
+print(en_rmse)
+print(cv_opt_en)
 
 
 #!# Only keep columns common to both the train and test sets
