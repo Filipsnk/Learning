@@ -1,3 +1,10 @@
+### Do wykorzystania ###
+
+# Slownik do zastepowania NA #
+# Tworzenie funkcji do zastepowania (zeby moc wdrozyc na zbiorze uczacym i testowym)
+# Unskew dataset - pozbawianie skosnosci#
+# np.where
+
 ##### Import of the libraries #####
 import time
 import numpy as np,  pandas as pd, seaborn as sns, matplotlib.pyplot as plt
@@ -13,7 +20,7 @@ from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split
-
+import scipy as sp
 ##### Setting working directory #####
 
 import os
@@ -67,17 +74,6 @@ def get_replacement(data):
     nb_nan_per_col = data.shape[0] - data.count()
     print(nb_nan_per_col[nb_nan_per_col != 0])
 
-missing_val_replace = {}
-    
-    # Type of zone (residential, commercial etc.), cannot be guessed 
-    # with current data. Set the mode.
-    missing_val_replace["MSZoning"] = total_data["MSZoning"].mode()[0]
-    missing_val_replace["Utilities"] = total_data["Utilities"].mode()[0]
-    test.loc[np.any(pd.isnull(test), axis=1), nb_nan_per_col != 0]
-    missing_val_replace["LotFrontage"] = 0
-    missing_val_replace["Alley"] = "None"
-    missing_val_replace["Exterior1st"] = total_data["Exterior1st"].mode()[0]
-    missing_val_replace["Exterior2nd"] = total_data["Exterior2nd"].mode()[0]
 ##### Available columns in the dataset #####
 
 print("Available columns: \n")
@@ -133,6 +129,210 @@ plt.title('Percent missing data by feature', fontsize=15)
 def adjustedR2(r2,n,k):
     return r2-(k-1)/(n-k)*(1-r2)
 
-##### Fitting simple linear regression #####
+
+
+##### Defining dictionary for replacement of NaNs #####
+
+def get_replacement(data):
+    nb_nan_per_col = data.shape[0] - data.count()
+    print(nb_nan_per_col[nb_nan_per_col != 0])
+
+    missing_val_replace = {}
+    missing_val_replace["MSZoning"] = total_data["MSZoning"].mode()[0]
+    missing_val_replace["Utilities"] = total_data["Utilities"].mode()[0]
+    missing_val_replace["LotFrontage"] = 0
+    missing_val_replace["Alley"] = "None"
+    missing_val_replace["Exterior1st"] = total_data["Exterior1st"].mode()[0]
+    missing_val_replace["Exterior2nd"] = total_data["Exterior2nd"].mode()[0]
+    missing_val_replace["MasVnrType"] = "None"
+    missing_val_replace["MasVnrArea"] = 0
+    missing_val_replace["BsmtFinType1"] = "Unf"
+    missing_val_replace["BsmtFinType2"] = "Unf"
+    missing_val_replace["BsmtQual"] = "TA"
+    missing_val_replace["BsmtCond"] = "TA"
+    missing_val_replace["BsmtExposure"] = total_data["BsmtExposure"].mode()[0]
+    missing_val_replace["BsmtFinSF1"] = 0
+    missing_val_replace["BsmtFinSF2"] = 0
+    missing_val_replace["BsmtUnfSF"] = 0
+    missing_val_replace["TotalBsmtSF"] = 0
+    missing_val_replace["BsmttotalBath"] = 0
+    missing_val_replace["BsmtHalfBath"] = 0
+    missing_val_replace["Electrical"] = total_data["Electrical"].mode()[0]
+    missing_val_replace["KitchenQual"] = total_data["KitchenQual"].mode()[0]
+    missing_val_replace["Functional"] = total_data["Functional"].mode()[0]
+    missing_val_replace["FireplaceQu"] = "None"
+    missing_val_replace["GarageType"] = "None"
+    missing_val_replace["GarageYrBlt"]= np.round(total_data["GarageYrBlt"].median())
+    missing_val_replace["GarageCars"]= np.round(total_data["GarageCars"].median())
+    missing_val_replace["GarageArea"]= np.round(total_data["GarageArea"].median())
+    missing_val_replace["GarageFinish"]= "None"
+    missing_val_replace["GarageQual"]= "None"
+    missing_val_replace["GarageCond"] = "None"
+    missing_val_replace["PoolQC"] = "None"
+    missing_val_replace["Fence"] = "None"
+    missing_val_replace["MiscFeature"] = "None"
+    missing_val_replace["SaleType"] = total_data["SaleType"].mode()[0]
+    
+    return missing_val_replace
+
+train.fillna(get_replacement(train), inplace=True)
+test.fillna(get_replacement(test), inplace=True)  
+
+print("Remaining missing values in train and test sets:")
+print(np.sum((train.shape[0] - train.count()) != 0))
+print(np.sum((test.shape[0] - test.count()) != 0))
+
+##### Changing the datatype of variables #####
+
+def ordinal_object_to_str(df):
+    df["LotShape"] = df["LotShape"].astype(str)
+    df["Utilities"] = df["Utilities"].astype(str)
+    df["LandSlope"] = df["LandSlope"].astype(str)
+    df["ExterQual"] = df["ExterQual"].astype(str)
+    df["ExterCond"] = df["ExterCond"].astype(str)
+    df["BsmtQual"] = df["BsmtQual"].astype(str)
+    df["BsmtCond"] = df["BsmtCond"].astype(str)
+    df["BsmtExposure"] = df["BsmtExposure"].astype(str)
+    df["BsmtFinType1"] = df["BsmtFinType1"].astype(str)
+    df["BsmtFinType2"] = df["BsmtFinType2"].astype(str)
+    df["HeatingQC"] = df["HeatingQC"].astype(str)
+    df["Electrical"] = df["Electrical"].astype(str)
+    df["KitchenQual"] = df["KitchenQual"].astype(str)
+    df["Functional"] = df["Functional"].astype(str)
+    df["FireplaceQu"] = df["FireplaceQu"].astype(str)
+    df["GarageQual"] = df["GarageQual"].astype(str)
+    df["GarageCond"] = df["GarageCond"].astype(str)
+    df["PavedDrive"] = df["PavedDrive"].astype(str)
+    df["PoolQC"] = df["PoolQC"].astype(str)
+    df["Fence"] = df["Fence"].astype(str)
+    return df
+
+def fix_dtypes(df):
+
+    df["MSSubClass"] = df["MSSubClass"].astype(object)
+    
+    df["LotShape"] = df["LotShape"].astype(int)
+    df["Utilities"] = df["Utilities"].astype(int)
+    df["LandSlope"] = df["LandSlope"].astype(int)
+    df["ExterQual"] = df["ExterQual"].astype(int)
+    df["ExterCond"] = df["ExterCond"].astype(int)
+    df["BsmtQual"] = df["BsmtQual"].astype(int)
+    df["BsmtCond"] = df["BsmtCond"].astype(int)
+    df["BsmtExposure"] = df["BsmtExposure"].astype(int)
+    df["BsmtFinType1"] = df["BsmtFinType1"].astype(int)
+    df["BsmtFinType2"] = df["BsmtFinType2"].astype(int)
+    df["HeatingQC"] = df["HeatingQC"].astype(int)
+    df["Electrical"] = df["Electrical"].astype(int)
+    df["KitchenQual"] = df["KitchenQual"].astype(int)
+    df["Functional"] = df["Functional"].astype(int)
+    df["FireplaceQu"] = df["FireplaceQu"].astype(int)
+    df["GarageQual"] = df["GarageQual"].astype(int)
+    df["GarageCond"] = df["GarageCond"].astype(int)
+    df["PavedDrive"] = df["PavedDrive"].astype(int)
+    df["PoolQC"] = df["PoolQC"].astype(int)
+    df["Fence"] = df["Fence"].astype(int)
+    df["GarageYrBlt"] = df["GarageYrBlt"].astype(int)
+
+    df["LotArea"] = df["LotArea"].astype(float)
+    df["BsmtFinSF1"] = df["BsmtFinSF1"].astype(float)
+    df["BsmtFinSF2"] = df["BsmtFinSF2"].astype(float)
+    df["BsmtUnfSF"] = df["BsmtUnfSF"].astype(float)
+    df["TotalBsmtSF"] = df["TotalBsmtSF"].astype(float)
+    df["1stFlrSF"] = df["1stFlrSF"].astype(float)
+    df["2ndFlrSF"] = df["2ndFlrSF"].astype(float)
+    df["LowQualFinSF"] = df["LowQualFinSF"].astype(float)
+    df["GrLivArea"] = df["GrLivArea"].astype(float)
+    df["GarageArea"] = df["GarageArea"].astype(float)
+    df["WoodDeckSF"] = df["WoodDeckSF"].astype(float)
+    df["OpenPorchSF"] = df["OpenPorchSF"].astype(float)
+    df["EnclosedPorch"] = df["EnclosedPorch"].astype(float)
+    df["3SsnPorch"] = df["3SsnPorch"].astype(float)
+    df["ScreenPorch"] = df["ScreenPorch"].astype(float)
+    df["PoolArea"] = df["PoolArea"].astype(float)
+    df["MiscVal"] = df["MiscVal"].astype(float)
+    
+    return df
+
+ordinal_replacements = {}
+ordinal_replacements["LotShape"] = {"Reg": "0", "IR1": "1", "IR2": "2", "IR3": "3"}
+ordinal_replacements["Utilities"] = {"AllPub": "0", "NoSewr": "1", "NoSeWa": "2", "ELO": "3"}
+ordinal_replacements["LandSlope"] = {"Gtl": "0", "Mod": "1", "Sev": "2"}
+ordinal_replacements["ExterQual"] = {"Ex": "0", "Gd": "1", "TA": "2", "Fa": "3", "Po": "4"}
+ordinal_replacements["ExterCond"] = {"Ex": "0", "Gd": "1", "TA": "2", "Fa": "3", "Po": "4"}
+ordinal_replacements["BsmtQual"] = {"Ex": "0", "Gd": "1", "TA": "2", "Fa": "3", "Po": "4"}
+ordinal_replacements["BsmtCond"] = {"Ex": "0", "Gd": "1", "TA": "2", "Fa": "3", "Po": "4"}
+ordinal_replacements["BsmtExposure"] = {"Gd": "0", "Av": "1", "Mn": "2", "No": "3"}
+ordinal_replacements["BsmtFinType1"] = {"GLQ": "0", "ALQ": "1", "BLQ": "2", "Rec": "3", "LwQ": "4", "Unf": "5"}
+ordinal_replacements["BsmtFinType2"] = {"GLQ": "0", "ALQ": "1", "BLQ": "2", "Rec": "3", "LwQ": "4", "Unf": "5"}
+ordinal_replacements["HeatingQC"] = {"Ex": "0", "Gd": "1", "TA": "2", "Fa": "3", "Po": "4"}
+ordinal_replacements["Electrical"] = {"SBrkr": "0", "FuseA": "1", "FuseF": "2", "FuseP": "3", "Mix": "4"}
+ordinal_replacements["KitchenQual"] = {"Ex": "0", "Gd": "1", "TA": "2", "Fa": "3", "Po": "4"}
+ordinal_replacements["Functional"] = {"Typ": "0", "Min1": "1", "Min2": "2", "Mod": "3", "Maj1": "4", 
+                                      "Maj2": "5", "Sev": "6", "Sal": "7"}
+ordinal_replacements["FireplaceQu"] = {"Ex": "0", "Gd": "1", "TA": "2", "Fa": "3", "Po": "4", "None": 5}
+ordinal_replacements["GarageQual"] = {"Ex": "0", "Gd": "1", "TA": "2", "Fa": "3", "Po": "4", "None": 5}
+ordinal_replacements["GarageCond"] = {"Ex": "0", "Gd": "1", "TA": "2", "Fa": "3", "Po": "4", "None": 5}
+ordinal_replacements["PavedDrive"] = {"Y": "0", "P": "1", "N": "2"}
+ordinal_replacements["PoolQC"] = {"Ex": "0", "Gd": "1", "TA": "2", "Fa": "3", "Po": "4", "None": 5}
+ordinal_replacements["Fence"] = {"GdPrv": "0", "MnPrv": "1", "GdWo": "2", "MnWw": "3", "None": 5}
+
+
+train = ordinal_object_to_str(train)
+train.replace(ordinal_replacements, inplace=True)
+train = fix_dtypes(train)
+
+test = ordinal_object_to_str(test)
+test.replace(ordinal_replacements, inplace=True)
+test = fix_dtypes(test)
+
+
+def unskew_dataset(data):
+    numeric_features = data.dtypes[data.dtypes == float].index
+    skewed_features = data[numeric_features].apply(lambda x: sp.stats.skew(x)) #compute skewness
+    skewed_features = skewed_features[skewed_features > 0.75]
+    skewed_features = skewed_features.index
+    data[skewed_features] = np.log1p(data[skewed_features])
+    return data
+
+##### Feature Engineering #####
+
+train['TotalSF'] = train['TotalBsmtSF'] + train['1stFlrSF'] + train['2ndFlrSF']
+test['TotalSF'] = test['TotalBsmtSF'] + test['1stFlrSF'] + test['2ndFlrSF']
+
+##### Indexes of categorical variables #####
+
+categorical_vars_indices = np.where((train.dtypes == object))[0]
+categorical_vars = train.columns[categorical_vars_indices]
+
+##### De-skewing of the features in train and test dataset #####
+
+train = unskew_dataset(train)
+test = unskew_dataset(test)
+
+
+##### Extracting dummies #####
+
+train_dummies = pd.get_dummies(train, columns=categorical_vars, 
+                                    drop_first=True, sparse=False)
+test_dummies = pd.get_dummies(test, columns=categorical_vars, 
+                                 drop_first=True, sparse=False)
+
+
+#!# Only keep columns common to both the train and test sets
+
+# IN [6]:
+
+##### BRUDNOPIS #####
+
+### 1. Petla po wszystkich kolumnach z inputboxem do wprowadzania sposobu zastepowania nulli
+
+#wartosc = input ('Jak masz na imie?')
+#print(wartosc)
+
+### 2. Zmienna 01 czy mieszkanie sprzedane/wybudowane w okresie kryzysu w USA?    
+
+
+
+
 
     
