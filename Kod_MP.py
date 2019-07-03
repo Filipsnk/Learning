@@ -5,6 +5,11 @@
 # Unskew dataset - pozbawianie skosnosci#
 # np.where
 # Zapis alpha do modelu
+# Isfile -> sprawdzamy czy istnieje jakis plik
+# Lars Lasso Coefficients
+# Porownywanie Grid Search na wykresie
+# Wykres Feature Importances
+
 
 ##### Import of the libraries #####
 import time
@@ -14,13 +19,14 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler, M
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from xgboost import XGBRegressor
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split, RepeatedKFold, KFold
+from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split, RepeatedKFold, KFold, cross_val_predict
 import scipy as sp
 from sklearn.linear_model import (ElasticNet, ElasticNetCV, Lasso, LassoCV, 
                                   LinearRegression, Perceptron)
@@ -370,6 +376,134 @@ en_rmse = np.sqrt(np.mean(cv_opt_en.mse_path_, axis=2)[l1_ratio_index, en_alpha_
 print(en_rmse)
 print(cv_opt_en)
 
+cv_opt_en_model = ElasticNet(alpha=cv_opt_en.alpha_, l1_ratio=cv_opt_en.l1_ratio_, 
+                         fit_intercept=True, normalize=True, 
+                         precompute=False, max_iter=10000, copy_X=True, tol=0.0001, 
+                         warm_start=False, positive=False, random_state=RNG_SEED, 
+                         selection="random")
+
+cv_opt_en_model = cv_opt_en_model.fit(train_dummies, y)
+
+en_preds = cv_opt_en_model.predict(test_dummies)
+en_cv_preds = cross_val_predict(cv_opt_en_model, train_dummies, y, 
+                                cv=stack_folds)
+
+##### Wykres Elastic NET  #####
+
+fig = plt.figure()
+ax = fig.add_subplot(111)
+for i in range(cv_opt_en.mse_path_.shape[0]):
+    ax.plot(np.log10(cv_opt_en.alphas_), np.mean(cv_opt_en.mse_path_[i, :, :], axis=1),
+             label=l1_ratios[i])
+ax.set_title(("Elastic net regularization path (L1 / alpha vs rmse)\n"
+             "best params: %s, %s" % (cv_opt_en.l1_ratio_, cv_opt_en.alpha_)))
+plt.legend()
+
+##### Elastic NET coefficients #####
+
+fig = plt.figure(figsize=(8, 50))
+ax = fig.add_subplot(111)
+ax.barh(np.arange(len(cv_opt_en.coef_), 0, -1), cv_opt_en.coef_,
+       tick_label=train_dummies.columns,)
+ax.set_title("Elastic network coefs")
+plt.show()
+
+##### K-Nearest neighbors #####
+
+metrics = ["euclidean", "manhattan", "minkowski", "chebyshev"]
+n_neighbors_list = np.arange(4, 11, 1)
+
+if not os.path.isfile("cv_opt_kn.pkl") or overwrite_models:
+    kn = KNeighborsRegressor(n_jobs=4, p=3)
+    kn_param_grid = {"n_neighbors": n_neighbors_list,
+                    "weights": ["uniform", "distance"],
+                    "metric": metrics}
+    kn_gs = GridSearchCV(estimator=kn, param_grid=kn_param_grid, scoring="neg_mean_squared_error", 
+                         fit_params=None, cv=rkf_cv)
+    cv_opt_kn = kn_gs.fit(train, y)
+    joblib.dump(cv_opt_kn, "cv_opt_kn.pkl")
+else:
+    cv_opt_kn = joblib.load("cv_opt_kn.pkl")
+    
+kn_rmse = np.sqrt(-cv_opt_kn.best_score_)
+print(cv_opt_kn.best_score_, kn_rmse)
+print(cv_opt_kn.best_estimator_)
+    
+cv_opt_kn_model = cv_opt_kn.best_estimator_
+
+kn_preds = cv_opt_kn_model.predict(test)
+kn_cv_preds = cross_val_predict(cv_opt_kn_model, train, y, cv=stack_folds)
+
+uniform_run = cv_opt_kn.cv_results_["param_weights"] == "uniform"
+distance_run = cv_opt_kn.cv_results_["param_weights"] == "distance"
+best_metric = cv_opt_kn.best_params_["metric"]
+has_best_metric = cv_opt_kn.cv_results_["param_metric"] == best_metric
+
+
+##### Wykres z Grid Search #####
+
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.plot(n_neighbors_list, 
+        np.sqrt(-cv_opt_kn.cv_results_["mean_test_score"][uniform_run & has_best_metric]),
+       label="uniform")
+ax.plot(n_neighbors_list, 
+        np.sqrt(-cv_opt_kn.cv_results_["mean_test_score"][distance_run & has_best_metric]),
+       label="distance")
+ax.set_title("Knn CV (%s) (#nn / weights vs rmse)\nBest params: %s, %s" % \
+             tuple(list(cv_opt_kn.best_params_.values())))
+plt.legend()
+plt.show()
+
+##### Gradient Boosting #####
+
+if not os.path.isfile("cv_opt_xgb.pkl") or overwrite_models:
+    xgb = XGBRegressor(random_state=RNG_SEED, n_estimators=500, n_jobs=4)
+    reg_ratios = [0.1, 0.5, 0.9]
+    xgb_param_grid = {"max_depth": [1, 2, 3, 5],
+                      "learning_rate": [0.05, 0.1, 0.2],
+                      "reg_lambda": reg_ratios,
+                      "reg_alpha": reg_ratios}
+    xgb_gs = GridSearchCV(estimator=xgb, param_grid=xgb_param_grid, 
+                          scoring="neg_mean_squared_error", 
+                          fit_params=None, cv=rkf_cv)
+    cv_opt_xgb = xgb_gs.fit(train, y)
+    joblib.dump(cv_opt_xgb, "cv_opt_xgb.pkl") 
+else:
+    cv_opt_xgb = joblib.load("cv_opt_xgb.pkl")
+    
+xgb_rmse = np.sqrt(-cv_opt_xgb.best_score_)
+print(cv_opt_xgb.best_score_, xgb_rmse)
+print(cv_opt_xgb.best_estimator_)
+
+cv_opt_xgb_model = cv_opt_xgb.best_estimator_
+
+xgb_preds = cv_opt_xgb_model.predict(test)
+xgb_cv_preds = cross_val_predict(cv_opt_xgb_model, train, y, cv=stack_folds)
+
+##### Feature importances
+fig = plt.figure(figsize=(8, 30))
+ax = fig.add_subplot(111)
+ax.barh(np.arange(len(cv_opt_xgb_model.feature_importances_), 0, -1), 
+        np.flip(np.sort(cv_opt_xgb_model.feature_importances_)),
+        tick_label=train.columns)
+
+for i in range(0,80):
+    if ax.get_yticklabels()[i].properties().get('text') in very_important:
+        ax.get_yticklabels()[i].set_color("red")
+    elif ax.get_yticklabels()[i].properties().get('text') in important:
+        ax.get_yticklabels()[i].set_color("orange")
+    elif ax.get_yticklabels()[i].properties().get('text') in decent:
+        ax.get_yticklabels()[i].set_color("yellow")
+    elif ax.get_yticklabels()[i].properties().get('text') in medium:
+        ax.get_yticklabels()[i].set_color("blue")
+    elif ax.get_yticklabels()[i].properties().get('text') in little_important:
+        ax.get_yticklabels()[i].set_color("navy") 
+    elif ax.get_yticklabels()[i].properties().get('text') in unimportant:
+        ax.get_yticklabels()[i].set_color("green") 
+        
+ax.set_title(cv_opt_xgb.best_score_)
+plt.show()
 
 #!# Only keep columns common to both the train and test sets
 
