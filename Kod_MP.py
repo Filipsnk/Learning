@@ -1,5 +1,6 @@
 ### Do wykorzystania ###
 
+# Obliczanie ile wartosci NA jest do zastapienia
 # Slownik do zastepowania NA #
 # Tworzenie funkcji do zastepowania (zeby moc wdrozyc na zbiorze uczacym i testowym)
 # Unskew dataset - pozbawianie skosnosci#
@@ -12,36 +13,39 @@
 
 
 ##### Import of the libraries #####
+
 import time
-import numpy as np,  pandas as pd, seaborn as sns, matplotlib.pyplot as plt
-from sklearn import model_selection
+import numpy as np,  pandas as pd, seaborn as sns, matplotlib.pyplot as plt, scipy as sp, matplotlib.patches as mpatches
+
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler, MaxAbsScaler
+from sklearn import model_selection
+from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split, RepeatedKFold, KFold, cross_val_predict
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-from sklearn.linear_model import LogisticRegression, LinearRegression
+
+from sklearn.linear_model import (ElasticNet, ElasticNetCV, Lasso, LassoCV, 
+                                  LinearRegression, LogisticRegression, Perceptron)
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from xgboost import XGBRegressor
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split, RepeatedKFold, KFold, cross_val_predict
-import scipy as sp
-from sklearn.linear_model import (ElasticNet, ElasticNetCV, Lasso, LassoCV, 
-                                  LinearRegression, Perceptron)
+from xgboost import XGBRegressor
+
 from sklearn.externals import joblib
+
+#####  Setting random seed #####
+
+RNG_SEED = int(time.time())
+print("Seed: %s" % RNG_SEED)
 
 ##### Setting working directory #####
 
 import os
 
-##### 
-RNG_SEED = int(time.time())
-print("Seed: %s" % RNG_SEED)
-
 #MM os.chdir('C:\\Users\Marek\\Desktop\\Python\\Kaggle\\Titanic')
 os.chdir('C:\\Users\\Marek.Pytka\\Desktop\\Inne szkolenia\\HousePrices')
+os.chdir('C:\\Users\\Marek\\Desktop\\Python\\Kaggle\\HousePrices')
 
 ##### Related kernel #####
 
@@ -64,26 +68,22 @@ train = import_data.drop(["Id", "SalePrice"], axis=1)
 X = import_data.loc[:, import_data.columns != 'SalePrice']
 y = import_data.loc[:, import_data.columns == 'SalePrice']
 
-### Log transformation for the Sales Price variable ###
-y = np.log1p(y)
-
 test = pd.read_csv('test.csv')
 test_ids = import_data["Id"]
 test = import_data.drop("Id", axis=1)
-
 total_data = pd.concat((train, test)).reset_index(drop=True)
 
 print("train set size: %s x %s" % train.shape)
 print("test set size: %s x %s" % test.shape)
 
+### Log transformation for the Sales Price variable ###
+
+y_old = y
+y = np.log1p(y)
+ 
 plt.figure()
 ax = sns.distplot(y)
-
-def get_replacement(data):
-# def get_replacement(train_set, test_set):
-    # data = pd.concat([train_set, test_set])
-    nb_nan_per_col = data.shape[0] - data.count()
-    print(nb_nan_per_col[nb_nan_per_col != 0])
+ax2 = sns.distplot(y_old)
 
 ##### Available columns in the dataset #####
 
@@ -91,6 +91,17 @@ print("Available columns: \n")
 for i in range (0,len(import_data.columns)):
     wynik = str(i) + ':' + import_data.columns[i] 
     print(wynik)
+
+##### Assign importances to the variables #####
+    
+    
+importances = pd.DataFrame({"Variable":import_data.columns, "Importance": np.nan})
+
+for i in range (0,len(import_data.columns)-70):
+
+    question = 'Jaka wartosc przypisac dla zmiennej ' + import_data.columns[i] + '?'
+    importance = int(input(question))
+    importances[i, 1]= importance
 
 ##### Predicted candidates for the regression ##### 
 
@@ -100,7 +111,6 @@ decent = ['MSZoning', 'Street', 'Alley', 'RoofStyle', 'RoofMatl', 'Exterior1st',
 medium = ['SaleType', 'LotFrontage', 'LotShape', 'BldgType', 'HouseStyle', 'BsmtCond', 'BsmtExposure', 'BsmtFinSF1', 'BsmtFinType2', 'BsmtFinSF2', 'BsmtUnfSF', 'Fireplaces', 'FireplaceQu', 'GarageFinish', 'GarageCars', 'GarageQual','GarageCond','PavedDrive','MiscFeature', 'SaleCondition']
 little_important = ['MSSubClass', 'LotConfig','Neighborhood', 'Condition1', 'Condition2', 'MasVnrType', 'MasVnrArea','LowQualFinSF', 'GrLivArea', 'BsmtFullBath', 'BsmtHalfBath', 'FullBath', 'HalfBath', 'MiscVal']
 unimportant =  ['WoodDeckSF', 'OpenPorchSF', 'EnclosedPorch', '3SsnPorch', 'ScreenPorch', 'PoolArea', 'PoolQC']
-
 
 ##### Storing the missing data in new variables ##### 
 
@@ -118,7 +128,14 @@ plt.xlabel('Features', fontsize=15)
 
 ###https://stackoverflow.com/questions/11244514/modify-tick-label-text
 
-for i in range(0,30):
+red_patch = mpatches.Patch(color='red', label='Very important')
+orange_patch = mpatches.Patch(color='orange', label='Important')
+yellow_patch = mpatches.Patch(color='yellow', label='Decent')
+blue_patch = mpatches.Patch(color='blue', label='Medium')
+navy_patch = mpatches.Patch(color='navy', label='Little important')
+green_patch = mpatches.Patch(color='green', label='Unimportant')
+
+for i in range(0,20):
     if ax.get_xticklabels()[i].properties().get('text') in very_important:
         ax.get_xticklabels()[i].set_color("red")
     elif ax.get_xticklabels()[i].properties().get('text') in important:
@@ -134,18 +151,13 @@ for i in range(0,30):
 
 plt.ylabel('Percent of missing values', fontsize=15)
 plt.title('Percent missing data by feature', fontsize=15)
-
-##### Adjusted R2 to avoid situation, where only adding new variable increases the R2 #####
-
-def adjustedR2(r2,n,k):
-    return r2-(k-1)/(n-k)*(1-r2)
-
+plt.legend(handles=[red_patch, orange_patch, yellow_patch, blue_patch, navy_patch, green_patch])
 
 
 ##### Defining dictionary for replacement of NaNs #####
 
-def get_replacement(data):
-    nb_nan_per_col = data.shape[0] - data.count()
+def get_replacement(data): #!# zwracamy wszystkie kolumny, ktore maja jakiekolwiek brakujace wartosci
+    nb_nan_per_col = data.shape[0] - data.count() #!# info ile wartosci jest do uzupelnienia w kazdej kolumnie
     print(nb_nan_per_col[nb_nan_per_col != 0])
 
     missing_val_replace = {}
@@ -185,6 +197,7 @@ def get_replacement(data):
     missing_val_replace["SaleType"] = total_data["SaleType"].mode()[0]
     
     return missing_val_replace
+
 
 train.fillna(get_replacement(train), inplace=True)
 test.fillna(get_replacement(test), inplace=True)  
@@ -287,6 +300,7 @@ ordinal_replacements["PavedDrive"] = {"Y": "0", "P": "1", "N": "2"}
 ordinal_replacements["PoolQC"] = {"Ex": "0", "Gd": "1", "TA": "2", "Fa": "3", "Po": "4", "None": 5}
 ordinal_replacements["Fence"] = {"GdPrv": "0", "MnPrv": "1", "GdWo": "2", "MnWw": "3", "None": 5}
 
+##### Fixing the datatypes for all of the values #####
 
 train = ordinal_object_to_str(train)
 train.replace(ordinal_replacements, inplace=True)
@@ -296,12 +310,13 @@ test = ordinal_object_to_str(test)
 test.replace(ordinal_replacements, inplace=True)
 test = fix_dtypes(test)
 
+##### Unskewing all features with skewness > 0.75 #####
 
 def unskew_dataset(data):
     numeric_features = data.dtypes[data.dtypes == float].index
-    skewed_features = data[numeric_features].apply(lambda x: sp.stats.skew(x)) #compute skewness
-    skewed_features = skewed_features[skewed_features > 0.75]
-    skewed_features = skewed_features.index
+    skewed_features = data[numeric_features].apply(lambda x: sp.stats.skew(x))
+    skewed_features = skewed_features[skewed_features > 0.75] #!# Ustalic jaki prog zmiennych nalezy uznac za skosne i co tu jest tak naprawde liczone?
+    skewed_features = skewed_features.index #!# Sprawdzic jak sie beda roznic wyniki gdy uzyjemy transformacji Box-Coxa?
     data[skewed_features] = np.log1p(data[skewed_features])
     return data
 
@@ -312,14 +327,13 @@ test['TotalSF'] = test['TotalBsmtSF'] + test['1stFlrSF'] + test['2ndFlrSF']
 
 ##### Indexes of categorical variables #####
 
-categorical_vars_indices = np.where((train.dtypes == object))[0]
+categorical_vars_indices = np.where((train.dtypes == object))[0] #!# Dlaczego niektore zmienne maja typ 'object'?
 categorical_vars = train.columns[categorical_vars_indices]
 
 ##### De-skewing of the features in train and test dataset #####
 
 train = unskew_dataset(train)
 test = unskew_dataset(test)
-
 
 ##### Extracting dummies #####
 
@@ -328,19 +342,17 @@ train_dummies = pd.get_dummies(train, columns=categorical_vars,
 test_dummies = pd.get_dummies(test, columns=categorical_vars, 
                                  drop_first=True, sparse=False)
 
-
 ##### Transform dummies #####
 
 label_enc = LabelEncoder()
-# fit on the concatenated train and test sets to get the same encoding 
-# for them both
+
 for var in categorical_vars:
     var_all = pd.concat([train.loc[:, var], test.loc[:, var]])
     label_enc.fit(var_all)
     train.loc[:, var] = label_enc.transform(train.loc[:, var])
     test.loc[:, var] = label_enc.transform(test.loc[:, var])
 
-##### Standaryzacja zmiennych #####
+##### Standaryzacja zmiennych ##### #!# Czy to jest tutaj niezbedne?
     
 scaler = StandardScaler()
 
@@ -349,7 +361,6 @@ train_dummies[:] = scaler.fit_transform(train_dummies)
 test[:] = scaler.fit_transform(test)
 test_dummies[:] = scaler.fit_transform(test_dummies)
 
-
 rkf_cv = KFold(n_splits=5, random_state=RNG_SEED)
 stack_folds = list(KFold(n_splits=5, random_state=RNG_SEED).split(train))
 
@@ -357,7 +368,6 @@ stack_folds = list(KFold(n_splits=5, random_state=RNG_SEED).split(train))
 
 l1_ratios = [.1, .5, .7, .9, .95, .99, 1]
 alphas = alphas=[1] + [10 ** -x for x in range(1, 8)] + [5 * 10 ** -x for x in range(1, 8)]
-
 overwrite_models = True
 
 if not os.path.isfile("cv_opt_en.pkl") or overwrite_models:
@@ -369,7 +379,7 @@ if not os.path.isfile("cv_opt_en.pkl") or overwrite_models:
 else:
     cv_opt_en = joblib.load("cv_opt_en.pkl")
 
-# cross-validated rmse for the best parameters
+#####  Uzywanie cross-validated RMSE do estymacji najlepszych parametrow ##### 
 l1_ratio_index = np.where(l1_ratios == cv_opt_en.l1_ratio_)[0][0]
 en_alpha_index = np.where(cv_opt_en.alphas_ == cv_opt_en.alpha_)[0][0]
 en_rmse = np.sqrt(np.mean(cv_opt_en.mse_path_, axis=2)[l1_ratio_index, en_alpha_index])

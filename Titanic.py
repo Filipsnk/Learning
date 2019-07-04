@@ -5,6 +5,7 @@
 
 import numpy as np,  pandas as pd, seaborn as sns, matplotlib.pyplot as plt
 from sklearn import model_selection
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
@@ -18,10 +19,10 @@ from sklearn.model_selection import GridSearchCV, cross_val_score
 from ZajebisteFunkcje import OptGridSearch
 
 import os
-#### DO SKASOWANIA #### 
+### DO SKASOWANIA #### 
 os.chdir('C:\\Users\\Marek\\Desktop\\Python\\Github\\Learning')
 os.chdir('C:\\Users\Marek\\Desktop\\Python\\Kaggle\\Titanic')
-os##.chdir('C:\\Users\\Marek.Pytka\\Desktop\\Inne szkolenia\\Dane\\titanic')
+##os.chdir('C:\\Users\\Marek.Pytka\\Desktop\\Inne szkolenia\\Dane\\titanic')
 
 ##### Ignore warnings ##### 
 
@@ -45,7 +46,7 @@ dane = pd.concat((train, test)).reset_index(drop=True)
 print("Kolumny jakie sa to: \n")
 for i in range (0,len(dane.columns)):
     wynik = str(i) + ':' + dane.columns[i] #!# Survived ma indeks 10
-    print(wynik, "\n")
+    print(wynik)
 
 ##### Check of the basic descriptive statistics #####
 
@@ -66,7 +67,22 @@ for i in range (0, len(dane.columns)):
     missing = dane.columns[i] + ': ' + str(round(brak[i] * 100/len(dane),3))+'%'    
     print(missing)
     
-#!# -> wykres slupkowy z procentem missing Data
+
+##### Storing the missing data in new variables ##### 
+
+all_data_na = (dane.isnull().sum() / len(dane)) * 100
+all_data_na = all_data_na.drop(all_data_na[all_data_na == 0].index).sort_values(ascending=False)[:30]
+missing_data = pd.DataFrame({'Missing Ratio' :all_data_na})
+missing_data.head(20)
+
+##### Barplot with percentage of missing data #####
+
+f, ax = plt.subplots(figsize=(15, 12))
+plt.xticks(rotation='90')
+sns.barplot(x=all_data_na.index, y=all_data_na)
+plt.xlabel('Features', fontsize=15)
+plt.ylabel('Percent of missing values', fontsize=15)
+plt.title('Percent missing data by feature', fontsize=15)
 
 ##### Grouping Survived by Sex #####
 
@@ -91,7 +107,6 @@ g = sns.FacetGrid(dane, col = 'Survived' , row = 'Pclass')
 g.map(plt.hist, 'Age')
 g.add_legend()
 
-
 ##### Extract Title from Name & Check + replace of rare titles #####
 
 dane['Title'] = dane.Name.str.extract('([a-zA-Z]+)\.')
@@ -112,6 +127,10 @@ dane.loc[dane.Title == "Miss", 'Title'] = int(3)
 dane.loc[dane.Title == "Rare", 'Title'] = int(1)
 dane.loc[dane.Title == "Master", 'Title'] = int(2)
 
+#!# Potencjalnie do skrocenia kodu wyzej #!#
+#TitleEncoder = OneHotEncoder()
+#dane['Title'] = TitleEncoder.fit_transform(dane['Title']) 
+
 ##### Convert Sex categories into int datatype #####
 
 dane['Sex'] = dane['Sex'].apply(lambda x: int(1) if x == "male" else 0)
@@ -127,7 +146,7 @@ ax = sns.countplot(x="Pclass", hue = 'Has_age', data=dane)
 ax.set_title("Ile osob ma podany wiek w zaleznosci od klasy")
 
 #### Variables' correlation chart #####
-#!# - czelencz - optymalizacja
+
 korelacja = dane.corr(method='pearson')
 corr = dane.corr()
 ax = sns.heatmap(
@@ -147,7 +166,6 @@ abs(corr_sort).sort_values(kind='quicksort', ascending = False)
 ##### Pivot table with PClass & Title #####
 
 Pclass_title_pred = pd.pivot_table(data=dane,values='Age', index = ['Pclass'],columns = ['Title'],aggfunc = np.median).values
-
 dane['Has_age'] = dane['Age']
 
 ##### Filling in NA values in Has_Age with respective medians #####
@@ -206,12 +224,14 @@ drop_columns = ['Age', 'Cabin', 'Embarked', 'Name', 'Ticket', 'FareBand','Passen
 dane = dane.drop(drop_columns, axis = 1)
 
 X = dane.loc[:, dane.columns != 'Survived'].values
-y = dane.iloc[:,0].values.astype(int)
+X_train_start = X[0:889,:]
+y = dane.iloc[:,5].values.astype(int)
+y_train_start = y[0:889] ### zbior dane laczy zbiory train oraz test. Dla zbioru test cala kolumna Survived 
 
 ##### Preparation for modelling #####
 
 from sklearn.model_selection import train_test_split
-X_train,X_test,y_train,y_test = train_test_split(X ,y,test_size = 0.2, random_state= 10)
+X_train,X_test,y_train,y_test = train_test_split(X_train_start,y_train_start,test_size = 0.2, random_state= 10)
 
 ##### Building Models #####
 
@@ -222,6 +242,7 @@ models.append(('KNN', KNeighborsClassifier()))
 models.append(('CART', DecisionTreeClassifier()))
 models.append(('NB', GaussianNB()))
 models.append(('SVM', SVC(gamma='auto')))
+models.append(('RTC', RandomForestClassifier()))
 
 names = []
 results = []
@@ -232,9 +253,35 @@ for name, model in models:
     msg= "%s: %f (%f)" % (name, cv_results.mean(),cv_results.std())
     print(msg)
 
-# Single models
+##### Single models ######
 
-# KNN 
+# Logistic Regression
+lr = LogisticRegression(solver='liblinear', multi_class='ovr')
+lr.fit(X_train, y_train)
+Y_pred = lr.predict(X_test)
+acc_lr = round(lr.score(X_train, y_train) * 100, 2)
+
+# Confusion Matrix for LR
+
+knn_lr = confusion_matrix(y_test,Y_pred)
+performance = int(round((knn_lr[0][0] + knn_lr[1][1]) / len(y_test),2) *100)
+print('Performance LR wynosi :', performance,'%')
+
+# Linear Discriminant Analysis 
+
+lda = LinearDiscriminantAnalysis()
+lda.fit(X_train, y_train)
+Y_pred = lda.predict(X_test)
+acc_lda = round(lda.score(X_train, y_train) * 100, 2)
+
+# Confusion Matrix for LDA
+
+knn_lda = confusion_matrix(y_test,Y_pred)
+performance = int(round((knn_lda[0][0] + knn_lda[1][1]) / len(y_test),2) *100)
+print('Performance LDA wynosi :', performance,'%')
+
+# K Nearest Neighbors
+ 
 knn = KNeighborsClassifier(n_neighbors=3, n_jobs = -1) #!# do optymalizacji parametry: n_neighbors (2,7), weights (uniform, distance), algorithm (auto, ball_tree, kd_tree, brute)
 knn.fit(X_train, y_train)
 Y_pred = knn.predict(X_test)
@@ -246,6 +293,45 @@ knn_cm = confusion_matrix(y_test,Y_pred)
 performance = int(round((knn_cm[0][0] + knn_cm[1][1]) / len(y_test),2) *100)
 print('Performance KNN wynosi :', performance,'%')
 
+# Decision Tree Classifier
+ 
+dtc = DecisionTreeClassifier() #!# do optymalizacji parametry: n_neighbors (2,7), weights (uniform, distance), algorithm (auto, ball_tree, kd_tree, brute)
+dtc.fit(X_train, y_train)
+Y_pred = dtc.predict(X_test)
+acc_dtc = round(dtc.score(X_train, y_train) * 100, 2)
+
+# Confusion Matrix for DTC
+
+dtc_cm = confusion_matrix(y_test,Y_pred)
+performance = int(round((dtc_cm[0][0] + dtc_cm[1][1]) / len(y_test),2) *100)
+print('Performance DTC wynosi :', performance,'%')
+
+# Gaussian NB
+ 
+gnb = GaussianNB() #!# do optymalizacji parametry: n_neighbors (2,7), weights (uniform, distance), algorithm (auto, ball_tree, kd_tree, brute)
+gnb.fit(X_train, y_train)
+Y_pred = gnb.predict(X_test)
+acc_gnb = round(gnb.score(X_train, y_train) * 100, 2)
+
+# Confusion Matrix for GNB
+
+gnb_cm = confusion_matrix(y_test,Y_pred)
+performance = int(round((gnb_cm[0][0] + gnb_cm[1][1]) / len(y_test),2) *100)
+print('Performance GNB wynosi :', performance,'%')
+
+# SVC
+ 
+svc = SVC() #!# do optymalizacji parametry: n_neighbors (2,7), weights (uniform, distance), algorithm (auto, ball_tree, kd_tree, brute)
+svc.fit(X_train, y_train)
+Y_pred = svc.predict(X_test)
+acc_svc = round(svc.score(X_train, y_train) * 100, 2)
+
+# Confusion Matrix for SVC
+
+svc_cm = confusion_matrix(y_test,Y_pred)
+performance = int(round((svc_cm[0][0] + svc_cm[1][1]) / len(y_test),2) *100)
+print('Performance SVC wynosi :', performance,'%')
+
 # Random Forest
 random = RandomForestClassifier(n_estimators = 20, max_depth = 10, random_state = 0, n_jobs = -1) #!# do optymalizacji: n_estimators, criterion, max_depth (?)  
 classifier = random.fit(X_train, y_train)
@@ -255,7 +341,6 @@ predict = random.predict(X_test)
 rf_cm = confusion_matrix(y_test,predict)
 performance = int(round((rf_cm[0][0] + rf_cm[1][1]) / len(y_test),2) *100) #!# unikajmy nazywania obiektow jak funkcje/metody (confusion_matrix)
 print('Performance RF wynosi :', performance,'%')
-
 
 # Grid Search for Random Forest
 

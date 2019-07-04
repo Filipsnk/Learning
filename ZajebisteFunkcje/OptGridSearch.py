@@ -18,18 +18,18 @@ from sklearn.model_selection import GridSearchCV, cross_val_score
 ########## petla optymalizujaca Grid Search ##########
 
 
-
-n_estimators = [int(x) for x in np.linspace(1,1000,10, endpoint = False)]
-n_neighbors = [int(x) for x in np.linspace(2,7,6, endpoint = False)]
-max_depth = [int(x) for x in np.linspace(1,100,10, endpoint = False)]
-n_neighbors = [2,3,4,5,6]
-parameters = {'n_estimators' : n_estimators,
-              'criterion' : ['gini','entropy'],
-              'max_depth' : max_depth}
-
-parameters_knn = {'n_neighbors': n_neighbors, 
-                  'weights': ['uniform', 'distance'], 
-                  'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute']}
+#
+#n_estimators = [int(x) for x in np.linspace(1,1000,10, endpoint = False)]
+#n_neighbors = [int(x) for x in np.linspace(2,7,6, endpoint = False)]
+#max_depth = [int(x) for x in np.linspace(1,100,10, endpoint = False)]
+#n_neighbors = [2,3,4,5,6]
+#parameters = {'n_estimators' : n_estimators,
+#              'criterion' : ['gini','entropy'],
+#              'max_depth' : max_depth}
+#
+#parameters_knn = {'n_neighbors': n_neighbors, 
+#                  'weights': ['uniform', 'distance'], 
+#                  'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute']}
 ######### Optymalizowane parametry #########
 
 
@@ -101,20 +101,21 @@ def OptimizedGridSearch(object_name, parameters_set, X_train, y_train, X_test, y
             else:
                 new_parameter = str(key) + '='  + str(value)
     
-        ##### Aktualizacja regressora #####
-    
+        ##### Aktualizacja regressora #####A
         if '()'  in syntax: ### regressor z opcja default 
             syntax = syntax.replace(')','') + str(new_parameter) + ')'  
         else:
             syntax = syntax.replace(')',',') + str(new_parameter) + ')'
         
-        syntax_loop = compile(syntax, '<string>', 'exec')
-        exec(syntax_loop) 
+        #syntax_loop = compile(source=syntax, filename = '',  mode = 'exec')
+        print(str(syntax))
+        exec(syntax, {"__builtins__":None}, {"RandomForestClassifier":RandomForestClassifier()})
+        #exec(syntax) 
     
         opt_object.fit(X_train,y_train) 
     
         #### Model k-fold Cross Validation + zrzut wynikow #####
-        accuracies = cross_val_score(estimator = classifier, X = X_test, y = y_test, cv = 3, n_jobs = -1)
+        accuracies = cross_val_score(estimator = opt_object, X = X_test, y = y_test, cv = 3, n_jobs = -1)
         oceny.append(str(i) + ': ' + 'mean: ' + str(round(accuracies.mean(),4)) + ' std: ' + str(round(accuracies.std(),4)))
     
         summary = 'Optymalny zestaw parametrow: ' + str(syntax) + '\n' + 'Czas trwania procedury:' + str(total_time)
