@@ -43,8 +43,7 @@ print("Seed: %s" % RNG_SEED)
 
 import os
 
-#MM os.chdir('C:\\Users\Marek\\Desktop\\Python\\Kaggle\\Titanic')
-os.chdir('C:\\Users\\Marek.Pytka\\Desktop\\Inne szkolenia\\HousePrices')
+#P os.chdir('C:\\Users\\Marek.Pytka\\Desktop\\Inne szkolenia\\HousePrices')
 os.chdir('C:\\Users\\Marek\\Desktop\\Python\\Kaggle\\HousePrices')
 
 ##### Related kernel #####
@@ -82,8 +81,8 @@ y_old = y
 y = np.log1p(y)
  
 plt.figure()
+#ax_old = sns.distplot(y_old)
 ax = sns.distplot(y)
-ax2 = sns.distplot(y_old)
 
 ##### Available columns in the dataset #####
 
@@ -91,17 +90,6 @@ print("Available columns: \n")
 for i in range (0,len(import_data.columns)):
     wynik = str(i) + ':' + import_data.columns[i] 
     print(wynik)
-
-##### Assign importances to the variables #####
-    
-    
-importances = pd.DataFrame({"Variable":import_data.columns, "Importance": np.nan})
-
-for i in range (0,len(import_data.columns)-70):
-
-    question = 'Jaka wartosc przypisac dla zmiennej ' + import_data.columns[i] + '?'
-    importance = int(input(question))
-    importances[i, 1]= importance
 
 ##### Predicted candidates for the regression ##### 
 
@@ -120,6 +108,7 @@ missing_data = pd.DataFrame({'Missing Ratio' :all_data_na})
 missing_data.head(20)
 
 ##### Barplot with percentage of missing data #####
+##### With font color depending on the importance of the variable #####
 
 f, ax = plt.subplots(figsize=(15, 12))
 plt.xticks(rotation='90')
@@ -134,7 +123,7 @@ yellow_patch = mpatches.Patch(color='yellow', label='Decent')
 blue_patch = mpatches.Patch(color='blue', label='Medium')
 navy_patch = mpatches.Patch(color='navy', label='Little important')
 green_patch = mpatches.Patch(color='green', label='Unimportant')
-
+#dir(ax.get_xticklabels()[1].properties())
 for i in range(0,20):
     if ax.get_xticklabels()[i].properties().get('text') in very_important:
         ax.get_xticklabels()[i].set_color("red")
@@ -198,7 +187,6 @@ def get_replacement(data): #!# zwracamy wszystkie kolumny, ktore maja jakiekolwi
     
     return missing_val_replace
 
-
 train.fillna(get_replacement(train), inplace=True)
 test.fillna(get_replacement(test), inplace=True)  
 
@@ -208,7 +196,10 @@ print(np.sum((test.shape[0] - test.count()) != 0))
 
 ##### Changing the datatype of variables #####
 
+### To string ###
+
 def ordinal_object_to_str(df):
+
     df["LotShape"] = df["LotShape"].astype(str)
     df["Utilities"] = df["Utilities"].astype(str)
     df["LandSlope"] = df["LandSlope"].astype(str)
@@ -231,10 +222,11 @@ def ordinal_object_to_str(df):
     df["Fence"] = df["Fence"].astype(str)
     return df
 
+### To object / integer ###
+
 def fix_dtypes(df):
 
-    df["MSSubClass"] = df["MSSubClass"].astype(object)
-    
+    df["MSSubClass"] = df["MSSubClass"].astype(object)    
     df["LotShape"] = df["LotShape"].astype(int)
     df["Utilities"] = df["Utilities"].astype(int)
     df["LandSlope"] = df["LandSlope"].astype(int)
@@ -257,6 +249,8 @@ def fix_dtypes(df):
     df["Fence"] = df["Fence"].astype(int)
     df["GarageYrBlt"] = df["GarageYrBlt"].astype(int)
 
+### To float ###
+
     df["LotArea"] = df["LotArea"].astype(float)
     df["BsmtFinSF1"] = df["BsmtFinSF1"].astype(float)
     df["BsmtFinSF2"] = df["BsmtFinSF2"].astype(float)
@@ -276,6 +270,8 @@ def fix_dtypes(df):
     df["MiscVal"] = df["MiscVal"].astype(float)
     
     return df
+
+### Replacing texts with numerical categories ###
 
 ordinal_replacements = {}
 ordinal_replacements["LotShape"] = {"Reg": "0", "IR1": "1", "IR2": "2", "IR3": "3"}
@@ -313,11 +309,14 @@ test = fix_dtypes(test)
 ##### Unskewing all features with skewness > 0.75 #####
 
 def unskew_dataset(data):
+
     numeric_features = data.dtypes[data.dtypes == float].index
     skewed_features = data[numeric_features].apply(lambda x: sp.stats.skew(x))
     skewed_features = skewed_features[skewed_features > 0.75] #!# Ustalic jaki prog zmiennych nalezy uznac za skosne i co tu jest tak naprawde liczone?
-    skewed_features = skewed_features.index #!# Sprawdzic jak sie beda roznic wyniki gdy uzyjemy transformacji Box-Coxa?
+    print(skewed_features) #!# Dodatkowa informacja  z lista zmiennych, ktore przekroczyly 'prog skosnosci' 
+    skewed_features = skewed_features.index 
     data[skewed_features] = np.log1p(data[skewed_features])
+    
     return data
 
 ##### Feature Engineering #####
@@ -366,7 +365,7 @@ stack_folds = list(KFold(n_splits=5, random_state=RNG_SEED).split(train))
 
 ##### Penalized linear regression #####
 
-l1_ratios = [.1, .5, .7, .9, .95, .99, 1]
+l1_ratios = [.1, .5, .7, .9, .53, .95, .99, 1]
 alphas = alphas=[1] + [10 ** -x for x in range(1, 8)] + [5 * 10 ** -x for x in range(1, 8)]
 overwrite_models = True
 
@@ -380,6 +379,7 @@ else:
     cv_opt_en = joblib.load("cv_opt_en.pkl")
 
 #####  Uzywanie cross-validated RMSE do estymacji najlepszych parametrow ##### 
+    
 l1_ratio_index = np.where(l1_ratios == cv_opt_en.l1_ratio_)[0][0]
 en_alpha_index = np.where(cv_opt_en.alphas_ == cv_opt_en.alpha_)[0][0]
 en_rmse = np.sqrt(np.mean(cv_opt_en.mse_path_, axis=2)[l1_ratio_index, en_alpha_index])
@@ -398,7 +398,7 @@ en_preds = cv_opt_en_model.predict(test_dummies)
 en_cv_preds = cross_val_predict(cv_opt_en_model, train_dummies, y, 
                                 cv=stack_folds)
 
-##### Wykres Elastic NET  #####
+##### Elastic NET Chart #####
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
@@ -414,7 +414,7 @@ plt.legend()
 fig = plt.figure(figsize=(8, 50))
 ax = fig.add_subplot(111)
 ax.barh(np.arange(len(cv_opt_en.coef_), 0, -1), cv_opt_en.coef_,
-       tick_label=train_dummies.columns,)
+       tick_label=train_dummies.columns)
 ax.set_title("Elastic network coefs")
 plt.show()
 
@@ -429,7 +429,7 @@ if not os.path.isfile("cv_opt_kn.pkl") or overwrite_models:
                     "weights": ["uniform", "distance"],
                     "metric": metrics}
     kn_gs = GridSearchCV(estimator=kn, param_grid=kn_param_grid, scoring="neg_mean_squared_error", 
-                         fit_params=None, cv=rkf_cv)
+                          cv=rkf_cv)
     cv_opt_kn = kn_gs.fit(train, y)
     joblib.dump(cv_opt_kn, "cv_opt_kn.pkl")
 else:
@@ -467,6 +467,8 @@ plt.show()
 
 ##### Gradient Boosting #####
 
+start_time = time.time()
+
 if not os.path.isfile("cv_opt_xgb.pkl") or overwrite_models:
     xgb = XGBRegressor(random_state=RNG_SEED, n_estimators=500, n_jobs=4)
     reg_ratios = [0.1, 0.5, 0.9]
@@ -476,22 +478,30 @@ if not os.path.isfile("cv_opt_xgb.pkl") or overwrite_models:
                       "reg_alpha": reg_ratios}
     xgb_gs = GridSearchCV(estimator=xgb, param_grid=xgb_param_grid, 
                           scoring="neg_mean_squared_error", 
-                          fit_params=None, cv=rkf_cv)
+                          cv=rkf_cv) #!# kasuje fir_params = None
     cv_opt_xgb = xgb_gs.fit(train, y)
     joblib.dump(cv_opt_xgb, "cv_opt_xgb.pkl") 
 else:
     cv_opt_xgb = joblib.load("cv_opt_xgb.pkl")
     
 xgb_rmse = np.sqrt(-cv_opt_xgb.best_score_)
+
 print(cv_opt_xgb.best_score_, xgb_rmse)
 print(cv_opt_xgb.best_estimator_)
 
-cv_opt_xgb_model = cv_opt_xgb.best_estimator_
+#!# Applying k-Fold Cross Validation
 
+start_time = time.time()
+accuracies = cross_val_score(estimator = cv_opt_xgb, X = train_dummies, y = y, cv = 3, n_jobs = -1)
+end_time = time.time()
+print((end_time - start_time)/60)
+print(accuracies) 
+
+cv_opt_xgb_model = cv_opt_xgb.best_estimator_
 xgb_preds = cv_opt_xgb_model.predict(test)
 xgb_cv_preds = cross_val_predict(cv_opt_xgb_model, train, y, cv=stack_folds)
 
-##### Feature importances
+##### Feature importances for XGB with variables sorted descending in terms of their importance ####
 fig = plt.figure(figsize=(8, 30))
 ax = fig.add_subplot(111)
 ax.barh(np.arange(len(cv_opt_xgb_model.feature_importances_), 0, -1), 
@@ -523,11 +533,14 @@ plt.show()
 
 ### 1. Petla po wszystkich kolumnach z inputboxem do wprowadzania sposobu zastepowania nulli
 
-#wartosc = input ('Jak masz na imie?')
-#print(wartosc)
+#importances = pd.DataFrame({"Variable":import_data.columns, "Importance": np.nan})
+#
+#for i in range (0,len(import_data.columns)-70):
+#    question = 'Jaka wartosc przypisac dla zmiennej ' + import_data.columns[i] + '?'
+#    importance = int(input(question))
+#    importances[i, 1]= importance
 
 ### 2. Zmienna 01 czy mieszkanie sprzedane/wybudowane w okresie kryzysu w USA?    
-
 
 
 
