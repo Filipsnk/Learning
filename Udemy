@@ -1,0 +1,36 @@
+Kurs udemy
+
+Statystyka:
+  1) rodzaje dystrybuant
+    1a) Uniform distribution - dla kazdej obserwacji prawdopodobienstwo jest takie samo (rozklad jednostajny)
+       dane = np.random.uniform(-10,10,1000)
+       
+       link: https://pl.wikipedia.org/wiki/Rozkład_jednostajny_ciągły
+    1b) Normal distribution
+    
+    1c) Exponential distribution
+        link: https://pl.wikipedia.org/wiki/Rozkład_wykładniczy
+        
+    1d) Binomial - discrete values
+        link: https://pl.wikipedia.org/wiki/Rozkład_dwumianowy
+        
+    1e) Poisson
+        link: https://pl.wikipedia.org/wiki/Rozkład_Poissona
+        
+ 2) Percentyle
+    Percentiles in normal distributions are also known as Quartiles
+    Python: plt.boxplot, np.percentile(df, percentyl)
+    
+ 3) Moments
+    3a) First moment - mean
+        Python: np.mean(data)
+        
+    3b) Second moment - variance
+        Python: np.var(data)
+        
+    3c) Third moment - Skew
+        Python: import scipy.stats as sp
+                sp.skew(data)
+                
+    3d) Fourth moment - Kurtosis - The more sharpest peak in normal distribution -> the higher kurtosis is
+        Python: sp.kurtosis
