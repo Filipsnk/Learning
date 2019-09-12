@@ -1,0 +1,183 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Sep 11 14:05:45 2019
+
+@author: Filip.Fraczek
+""""
+
+
+
+
+
+
+import pandas as pd
+import numpy as np
+
+r_cols = ['user_id', 'movie_id', 'rating']
+ratings = pd.read_csv('u.data', sep='\t', names=r_cols, usecols=range(3), encoding="ISO-8859-1")
+
+m_cols = ['movie_id', 'title']
+movies = pd.read_csv('u.item', sep='|', names=m_cols, usecols=range(2), encoding="ISO-8859-1")
+
+ratings = pd.merge(movies, ratings)
+
+userRatings = ratings.pivot_table(index=['user_id'],columns=['title'],values='rating')
+userRatings.head()
+
+X = pd.DataFrame(columns = ['columns','missing'])
+
+#How many missing values
+
+for i in range(0,len(userRatings.index)):
+    column = userRatings.index[i]
+    missing = userRatings.loc[i].isnull().sum()
+    X = X.append({'columns': column, 'missing':missing},ignore_index = True)
+    
+X.sort_values(by='missing', ascending = True)
+
+
+corrMatrix = userRatings.corr(method='pearson', min_periods=100)
+corrMatrix.head()
+
+
+
+
+#test
+"""
+sims= corrMatrix[myRatings.index[0]].dropna()
+sims= sims.map(lambda x: x * myRatings[0])
+simCandidates = simCandidates.append(sims)
+
+sims= corrMatrix[myRatings.index[1]].dropna()
+sims= sims.map(lambda x: x * myRatings[1])
+simCandidates = simCandidates.append(sims)
+
+sims = corrMatrix[myRatings.index[2]].dropna()
+sims = sims.map(lambda x: x * myRatings[2])
+simCandidates = simCandidates.append(sims)
+"""
+
+# Start petli
+final_matrix = pd.DataFrame(columns=['Id','movie1','movie2','movie3'])
+
+userRatings2 = userRatings.iloc[:100,]
+
+
+for i in range(0,len(userRatings2.index)): 
+
+    myRatings = userRatings2.loc[1].dropna()
+    
+    simCandidates = pd.Series()
+    for j in range(0, len(myRatings.index)):
+        print ("Adding sims for " + myRatings.index[j] + "...")
+        # Retrieve similar movies to this one that I rated
+        sims = corrMatrix[myRatings.index[j]].dropna()
+        # Now scale its similarity by how well I rated this movie
+        sims = sims.map(lambda x: x * myRatings[j])
+        # Add the score to the list of similarity candidates
+        simCandidates = simCandidates.append(sims)
+        
+    print ("sorting...")
+    simCandidates.sort_values(inplace = True, ascending = False)
+              
+    simCandidates = simCandidates.groupby(simCandidates.index).sum()
+            
+    simCandidates.sort_values(inplace = True, ascending = False)
+            
+    #filteredSims = simCandidates.index.drop(labels = myRatings.index)
+            
+    top_recommendations = simCandidates.nlargest(3)
+    top = top_recommendations.index
+    top = pd.Series(top)
+    
+    simCandidates
+    
+    for i in top:
+        if i in myRatings and i in simCandidates:
+            
+            
+            
+            top.replace(top[i],simCandidates[i+1])
+        else:
+            print("not ok")
+            
+            
+[i for i,x in enumerate(simCandidates.index) if x == top[0]]  
+
+
+    
+    final_matrix = final_matrix.append({'Id': userRatings2.index[0], 'movie1':top[0], 'movie2':top[1],'movie3':top[2]},ignore_index = True)
+    
+    del myRatings, simCandidates, sims,top_recommendations,top,filteredSims
+
+
+
+for i in range(0,len(userRatings2.index)): 
+
+myRatings = userRatings2.loc[1].dropna()
+
+simCandidates = pd.Series()
+for j in range(0, len(myRatings.index)):
+    print ("Adding sims for " + myRatings.index[j] + "...")
+    # Retrieve similar movies to this one that I rated
+    sims = corrMatrix[myRatings.index[j]].dropna()
+    # Now scale its similarity by how well I rated this movie
+    sims = sims.map(lambda x: x * myRatings[j])
+    # Add the score to the list of similarity candidates
+    simCandidates = simCandidates.append(sims)
+    
+print ("sorting...")
+simCandidates.sort_values(inplace = True, ascending = False)
+          
+simCandidates = simCandidates.groupby(simCandidates.index).sum()
+        
+simCandidates.sort_values(inplace = True, ascending = False)
+
+        
+filteredSims = simCandidates.drop(myRatings2)
+        
+top_recommendations = filteredSims.nlargest(3)
+
+
+top = top_recommendations.index
+top = pd.Series(top)
+final_matrix = final_matrix.append({'Id': userRatings2.index[1], 'movie1':top[0], 'movie2':top[1],'movie3':top[2]},ignore_index = True)
+del myRatings, simCandidates, sims,top_recommendations,top
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
