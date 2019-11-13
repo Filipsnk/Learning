@@ -1,0 +1,22 @@
+
+###
+SQL Server # Trigger który uzupełnia kolumnę InsertID z wartością inserta
+
+CREATE TRIGGER asd
+ON dbo.test
+AFTER INSERT
+AS
+	DECLARE @ID int
+	SET @ID = (Select distinct(Lad) from dbo.test where Lad = (select max(Lad) from dbo.test))
+IF EXISTS
+	(
+	select Lad from dbo.test where Lad is NULL
+	)
+BEGIN	
+		UPDATE dbo.test
+		SET Lad = @ID + 1
+		WHERE Lad is NULL
+END
+GO
+
+###
