@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Nov 19 17:51:19 2019
+
+@author: filipfraczek
+"""
+
+
+import numpy as np
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+import re
+from selenium import webdriver
+import json
+
+#Getting HTML from NYTimes page
+url = 'https://www.olx.pl/nieruchomosci/mieszkania/sprzedaz/krakow/'
+r = requests.get(url)
+html = r.text
+
+#Reading data from all available pages. By default 200 is set up
+
+All_data = pd.DataFrame(columns=['ID','Prize(zl)','District'])
+
+for i in range(1,5):
+    
+        site = str('https://www.olx.pl/nieruchomosci/mieszkania/sprzedaz/krakow/')
+        next_page = '?page='
+        number = i
+        web =site +next_page + str(number)
+        
+        r = requests.get(web)
+        html = r.text
+        soup = BeautifulSoup(html)
+        
+        
+        data = soup.find_all('tr',class_= "wrap")
+        print(web)
+        
+        for y in range(0,len(data)):
+            
+            try:
+                #ID
+                id = int(data[y].find('table')['data-id'])
+                
+                # District
+                
+                district = data[y].find_all('small')[1].text.lstrip().rstrip()
+                district = district.split(',')[1].lstrip()
+                    
+                #Prize
+                prize_1 = data[y].find_all('strong')[1].text
+                prize_2 = prize_1.rsplit('zł')[0]
+                prize_3 = int(prize_2.replace(' ',''))
+                
+                All_data.loc[len(All_data)] = [id,prize_3,district]
+            except:
+                pass
+    
+    
+#####################################
+All_data['Web'] = 0
+
+for index,row in All_data.iterrows():
+    
+    try:
+         
+        advert_id = int(All_data.loc[index,['ID']])
+        site2 = str('https://www.olx.pl/krakow/q-')
+        ad = str(advert_id)
+        web2 = site2 + ad
+        
+        r2 = requests.get(web2)
+        html2 = r2.text
+        soup2 = BeautifulSoup(r2.content, 'html.parser')
+        
+        
+        data2_regular = soup2.find_all("a", {"class": "thumb vtop inlblk rel tdnone linkWithHash scale4 detailsLink"})   
+        data2_promoted = soup2.find_all("a",{"class": "thumb vtop inlblk rel tdnone linkWithHash scale4 detailsLinkPromoted"})
+        
+        if data2_regular == []:
+            ad_link = data2_promoted
+        else:
+            ad_link = data2_regular
+    
+        #Page link
+        link = ad_link[0]['href']
+     
+        All_data.loc[index,['Web']] = link
+        
+    except:
+        pass
+    
+### Adding new columns
+  
+
+All_data['Level'] = 0
+All_data['Type'] = 0
+All_data['Meters'] = 0
+All_data['Building_type'] = 0
+All_data['No_of_rooms'] = 0
+All_data['Prize/m2']= 0
+
+### Additional info
+
+for index,row in All_data.iterrows():
+
+    try:        
+    
+        web3 = All_data.loc[2,['Web']]
+        r3 = requests.get(web3[0])
+        html3 = r3.text
+        soup3 = BeautifulSoup(r3.content, 'html.parser')
+    
+        data3 = soup3.find_all(class_='details fixed marginbott20 margintop5 full')
+    
+        data4 = soup3.find_all('div',class_='css-z144hi-Jt')
+    
+        
+        if data3 == []:
+            
+            # Level
+            
+            Level_oto = data4[0].find_all('strong')[4].text
+            All_data.loc[index,['Level']] = Level_oto
+            
+            #Type
+            
+            Type_oto = data4[0].find_all('strong')[2].text.capitalize()            
+            All_data.loc[index,['Type']] = Type_oto
+            
+            #Meters
+            
+            Meters_oto_1 = data4[0].find_all('strong')[0].text
+            Meters_oto_2 = Meters_oto_1.rsplit('m²')[0]
+            Meters_oto = float(Meters_oto_2.rstrip().replace(',','.'))
+            
+            All_data.loc[index,['Meters']] = Meters_oto
+            
+            #Building type
+            
+            Building_type_oto = data4[0].find_all('strong')[3].text.capitalize()
+            All_data.loc[index,['Building_type']] = Building_type_oto
+            
+            #No_of_rooms
+            
+            No_of_rooms_oto = data4[0].find_all('strong')[1].text
+            All_data.loc[index,['No_of_rooms']] = No_of_rooms_oto
+
+        else:
+        
+            #Level
+            
+            Level_olx = data3[0].find_all('strong')[2].text.lstrip().rstrip()
+            All_data.loc[index,['Level']] = Level_olx
+
+            #Type
+            
+            Type_olx = data3[0].find_all('strong')[4].text.lstrip().rstrip()
+            All_data.loc[index,['Type']] = Type_olx
+
+            # Meters
+            
+            Meters_olx_1 = data3[0].find_all('strong')[6].text.lstrip().rstrip()
+            Meters_olx_2 = Meters_olx_1.rsplit('m²')[0]
+            Meters_olx = float(Meters_olx_2.rstrip().replace(',','.'))
+            All_data.loc[index,['Meters']] = Meters_olx
+
+            #Building type
+            
+            Building_type_olx = data3[0].find_all('strong')[5].text.lstrip().rstrip()
+            All_data.loc[index,['Building_type']] = Building_type_olx
+
+            #No of rooms
+        
+            No_of_rooms_olx_1 = data3[0].find_all('strong')[7].text.lstrip().rstrip()       
+            No_of_rooms_olx = No_of_rooms_olx_1.split()[0]
+            All_data.loc[index,['No_of_rooms']] = No_of_rooms_olx
+            
+    except:
+        pass
+        
+   
+        
