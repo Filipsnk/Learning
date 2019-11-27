@@ -10,7 +10,7 @@ import smtplib
 host = "smtp.gmail.com"
 port = 587
 username = "marianpajton@gmail.com"
-password = "pajton123"
+password = "xxx"
 
 from_email = username
 to = ["marianpajton@gmail.com"]
