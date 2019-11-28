@@ -14,6 +14,16 @@ from bs4 import BeautifulSoup
 import re
 from selenium import webdriver
 import json
+import smtplib, ssl
+import smtplib, ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+
+prize_min = int(input("What is min prize :"))
+prize_max = int(input("What is max prize :"))
+district = str(input("What district do you prefer: "))
+
 
 #Getting HTML from NYTimes page
 url = 'https://www.olx.pl/nieruchomosci/mieszkania/sprzedaz/krakow/'
@@ -101,7 +111,6 @@ All_data['Type'] = 0
 All_data['Meters'] = 0
 All_data['Building_type'] = 0
 All_data['No_of_rooms'] = 0
-All_data['Prize/m2']= 0
 
 ### Additional info
 
@@ -109,7 +118,7 @@ for index,row in All_data.iterrows():
 
     try:        
     
-        web3 = All_data.loc[2,['Web']]
+        web3 = All_data.loc[index,['Web']]
         r3 = requests.get(web3[0])
         html3 = r3.text
         soup3 = BeautifulSoup(r3.content, 'html.parser')
@@ -182,5 +191,66 @@ for index,row in All_data.iterrows():
     except:
         pass
         
+### Searching adverts
+
+offer = All_data.loc[(All_data['Prize(zl)'] >= prize_min) & (All_data['Prize(zl)'] <= prize_max) & (All_data['District'] == district)]
+
+### Logging into account
+port = 465  # For SSL
+password = input("Type your password and press enter: ")
+
+# Create a secure SSL context
+context = ssl.create_default_context()
+
+with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
+    server.login("mieszkania.olx.krk.com", password)
+    # TODO: Send email here
+
+sender_email = "mieszkania.olx.krk@gmail.com"
+receiver_email = "pajakfilip@gmail.com"
+password = input("Type your password and press enter:")
+
+message = MIMEMultipart("alternative")
+message["Subject"] = "Lista proponowanych ogłoszeń OLX"
+message["From"] = sender_email
+message["To"] = receiver_email
+
+# Create the plain-text and HTML version of your message
+text = """\
+Hej,
+
+Wyniki na dzisiaj to...
+
+{table}
+
+"""
+html = """\
+<html>
+<body>
+<p> Hej, </p>
+<p> Wyniki na dzisiaj to...</p>
+{0}   
+</body>
+</html>
+""".format(offer.to_html(index = False, justify = 'center'))
+
+# Turn these into plain/html MIMEText objects
+part1 = MIMEText(text, "plain")
+part2 = MIMEText(html, "html")
+
+
+# Add HTML/plain-text parts to MIMEMultipart message
+# The email client will try to render the last part first
+message.attach(part1)
+message.attach(part2)
+
+# Create secure connection with server and send email
+context = ssl.create_default_context()
+with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+    server.login(sender_email, password)
+    server.sendmail(
+        sender_email, receiver_email, message.as_string()
+    )
+
    
         
