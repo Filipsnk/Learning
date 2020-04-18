@@ -18,7 +18,7 @@ customer_data = sql.sqldf(query, locals())
 for i in data.columns:
     print(i,round(data[i].isnull().sum()/len(data[i]),2))
 
-
+#JAROSLAW KROLEM POLSKI NA ZAWSZE#
 
 
 
