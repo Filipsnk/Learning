@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Nov 16 14:16:10 2019
+
+@author: filipfraczek
+"""
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Nov 14 18:24:25 2019
+
+@author: filipfraczek
+"""
+
+
+from InstagramAPI import InstagramAPI
+import imageio
+import numpy as np
+import time
+import pandas as pd
+import seaborn as sns
+import matplotlib as plt
+
+
+imageio.plugins.ffmpeg.download()
+
+
+
+username = 'francesco686'
+pwd = 'Kochamzdjecia123'
+API = InstagramAPI(username,pwd)
+API.login()
+time.sleep(2)
+
+API.getProfileData()
+API.LastJson.keys()
+
+
+print(API.LastJson['user'].keys())
+print(API.LastJson['status'])
+print(API.LastJson['items'])
+
+#UserID
+my_id = API.LastJson['user']['pk']
+
+
+#Number of posts
+n_media = API.LastJson['user']['media_count']
+
+#URL of profile picture
+image = API.LastJson['user']['profile_pic_url']
+
+#More info
+print(API.getUsernameInfo(my_id))
+
+API.getUsernameInfo(my_id)
+
+API.LastJson['items']
+
+
+media_ids = []
+max_id = ''
+for i in range(0,n_media): 
+    API.getUserFeed(usernameId=my_id, maxid = max_id)
+    media_ids += API.LastJson['items'] 
+    if API.LastJson['more_available']==False:
+        print ("no more avaliable")         
+        break
+    max_id = API.LastJson['next_max_id'] 
+    print (i, "   next media id = ", max_id, "  ", len(media_ids))
+    time.sleep(3)
+
+
+likers = []
+m_id = 0
+print ("wait %.1f minutes" % (n_media*2/60.))
+for i in range(len(media_ids)):
+    m_id = media_ids[i]['id']
+    API.getMediaLikers(m_id)
+    likers += [API.LastJson]
+    time.sleep(2)
+print ("done!")
+
+# How many users
+
+ind = []
+suma = []
+for i in range(0,len(likers)):
+    ind = int(i)
+    probka = likers[i]
+    for y in probka['users']:
+        suma.append(y['username'])
+    
+users_set = set(suma)      
+
+l_dict = {}
+for user in users_set:
+   # l_dict structure - {username:number_of_liked_posts} 
+   l_dict[user] = users.count(user)
+
+#creating dataframe with resulsts
+counts,values = pd.Series(suma).value_counts().values, pd.Series(suma).value_counts().index
+df_results = pd.DataFrame(list(zip(values,counts)),columns=["value","count"])
+
+ #checking particular user
+df_results[df_results.value == 'samanta.skupien']
+
+#Sort values descending
+df_results.sort_values(by=['count'],ascending = False)[:10]
+
+# save top10
+top10 = df_results.sort_values(by=['count'],ascending = False)[:10]
+
+#barplot
+ax = sns.barplot(x = 'count', y = 'value', data = top10, orient = "h")
+ax.set(ylabel='number of likes')
+
+
+
+
+
+
+
+
+
+
+
+
+
