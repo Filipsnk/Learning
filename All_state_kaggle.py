@@ -18,10 +18,23 @@ customer_data = sql.sqldf(query, locals())
 for i in data.columns:
     print(i,round(data[i].isnull().sum()/len(data[i]),2))
 
-#JAROSLAW KROLEM POLSKI NA ZAWSZE#
+
+## Dla kazdego klienta wyciagnij jego finalna polise ktora kupil (ostatni wiersz per klient)
+def klient(df):
+        
+    klient_zakup= pd.DataFrame()
+    
+    Customers=list(set(df['customer_ID']))
+    
+    for i in Customers:
+        
+        cust=df.loc[df['customer_ID']==i,:][-1:]
+        
+        klient_zakup = klient_zakup.append(cust)
+        print('Dodawanie klienta numer: ',i)
 
 
-
+    
 
 
 
