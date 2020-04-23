@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import pandas as pd, numpy as np, pandasql as sql, webbrowser as wbr
+import pandas as pd, numpy as np, pandasql as sql, webbrowser as wbr,  seaborn as sns
 import os
 
+### KAGGLE + NOTES LINK ###
 wbr.open_new_tab('https://www.kaggle.com/c/allstate-purchase-prediction-challenge/data')
+wbr.open_new_tab('https://docs.google.com/document/d/1c82cgdvH0DUGtxy-5OWSMhLfqCo5GkRDTo6OBk7NvwQ/edit')
 
+### SET WORKING DIRECTORY ###
 os.chdir('C://Users//Marek//Desktop//Python//Kaggle//AllState')
 
 ### IMPORT DATA ###
@@ -14,7 +17,16 @@ train = pd.read_csv('train.csv')
 test = pd.read_csv('test_v2.csv')
 sample_submission = pd.read_csv('sampleSubmission.csv')
 
-query = 'select * from train where Customer_ID in (10015208,10015208,10015221,10015226,10015288)'
+### PRINT NULLS PERCENTAGE IN ALL COLUMNS ###
+
+for i in train.columns:
+    print(i,round(train[i].isnull().sum()/len(train[i]),2)*100)
+    
+### SQL CHECKS ###
+
+### CHECK OF RANDOM CUSTOMERS ### 
+
+query = 'select * from train where Customer_ID in (10015208,10015221,10015226,10015288)'
 customer_data = sql.sqldf(query, locals())
 
 ### CHECK IF THE NUMBER OF STATES IS EQUAL BETWEEN TRAIN AND TEST ###
@@ -28,23 +40,32 @@ distinct_states_test = sql.sqldf(query_2, locals())
 check_1 = 'SELECT state FROM train WHERE state NOT IN (SELECT state FROM test)'
 check_1_result = sql.sqldf(check_1, locals())
 
-### ENCODE 'STATE' VARIABLE END REMOVE IT FROM TRAINING SET ###
+risk_nulls = 'SELECT COUNT(*) FROM train WHERE risk_factor is NULL'
+risk_nulls_result = sql.sqldf(risk_nulls, locals())
 
-train_dummy = pd.concat([train,pd.get_dummies(train['state'])],axis=1)
-del train_dummy['state']
+### CHECK DEPENDENCY BETWEEN RISK_FACTOR AND AGE_OLDEST / YOUNGEST ###
 
-### PRINT NULLS PERCENTAGE IN ALL COLUMNS ###
+risk_factor_nulls = 'SELECT risk_factor, MAX(age_oldest), MIN(age_oldest), MAX(age_youngest), MIN(age_youngest) FROM train'
+risk_factor_nulls_2 = 'SELECT risk_factor, AVG(age_oldest), AVG(age_youngest) FROM train GROUP BY risk_factor'
+risk_factor_nulls_results = sql.sqldf(risk_factor_nulls, locals())
+risk_factor_nulls_2_results = sql.sqldf(risk_factor_nulls_2, locals())
 
-for i in train.columns:
-    print(i,round(train[i].isnull().sum()/len(train[i]),2))
+### CHECK CORELATION BETWEEN RISK_FACTOR AND OTHER VARIABLES - HEATMAP ###
 
+corr = train.corr()
+
+sns.heatmap(corr, 
+        xticklabels=corr.columns,
+        yticklabels=corr.columns)
+
+abs(corr['risk_factor']).sort_values(ascending = False)
 
 ### FEATURE ENGINEERING ###
 
 ### TIME OF DAY (0 - morning, 1 - afternoon, 2- evening)
 
 # Extract hour from Time variable and convert to int
-train_dummy['hour'] = train_dummy['time'].str.slice(start=0, stop = 2).astype('int') 
+train['hour'] = train['time'].str.slice(start=0, stop = 2).astype('int') 
 
 def time_of_day(row):
     if row['hour'] >= 6 and row['hour'] <= 11:
@@ -55,10 +76,20 @@ def time_of_day(row):
         val = 2
     return val
 
-train_dummy['time_of_day'] = train_dummy.apply(time_of_day, axis=1)
+train['time_of_day'] = train.apply(time_of_day, axis=1)
 
-hour_check = 'SELECT MAX(hour), MIN(hour) FROM train_dummy'
+hour_check = 'SELECT MAX(hour), MIN(hour) FROM train'
 print(sql.sqldf(hour_check, locals()))
+
+### GROUP AGE DIFFERENCE (age_oldest - age_youngest)
+
+train['age_diff'] = train['age_oldest'] - train['age_youngest'] 
+
+### ENCODE 'STATE' VARIABLE END REMOVE IT FROM TRAINING SET ###
+
+train_dummy = pd.concat([train,pd.get_dummies(train['state'])],axis=1)
+del train_dummy['state']
+
 
 
 ### FILL NULLS IN RISK FACTOR COLUMN ###
@@ -82,10 +113,9 @@ def klient(df):
         
         klient_zakup = klient_zakup.append(cust)
         print('Dodawanie klienta numer: ',i)
-
-
     
 =======
+
 # IS ACCEPTED (1 - offer has been accepted, 0 - not accepted yet)
 
 query_ao= 'SELECT customer_ID, MAX(shopping_pt) AS shopping_pt, 1 As IsAccepted FROM train GROUP BY customer_id'
@@ -102,5 +132,3 @@ train_dummy['IsAccepted'] = train_dummy['IsAccepted'].fillna(0)
 >>>>>>> 25f53fdb4d28fa55c9b84a36b0e2a3cd59b358c9
 
   
-        
-
