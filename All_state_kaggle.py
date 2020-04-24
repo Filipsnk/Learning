@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import pandas as pd, numpy as np, pandasql as sql, webbrowser as wbr,  seaborn as sns
+import pandas as pd, numpy as np, pandasql as sql, webbrowser as wbr, seaborn as sns
 import os
 
 ### KAGGLE + NOTES LINK ###
@@ -16,6 +16,9 @@ os.chdir('C://Users//Marek//Desktop//Python//Kaggle//AllState')
 train = pd.read_csv('train.csv')
 test = pd.read_csv('test_v2.csv')
 sample_submission = pd.read_csv('sampleSubmission.csv')
+
+### ACCEPTED OFFERS ###
+accepted_offers = train.loc[train['record_type']==1,:]
 
 ### PRINT NULLS PERCENTAGE IN ALL COLUMNS ###
 
@@ -40,6 +43,8 @@ distinct_states_test = sql.sqldf(query_2, locals())
 check_1 = 'SELECT state FROM train WHERE state NOT IN (SELECT state FROM test)'
 check_1_result = sql.sqldf(check_1, locals())
 
+### CHECK HOW MANY NULLS ARE THERE IN RISK_FACTOR ###
+
 risk_nulls = 'SELECT COUNT(*) FROM train WHERE risk_factor is NULL'
 risk_nulls_result = sql.sqldf(risk_nulls, locals())
 
@@ -50,6 +55,20 @@ risk_factor_nulls_2 = 'SELECT risk_factor, AVG(age_oldest), AVG(age_youngest) FR
 risk_factor_nulls_results = sql.sqldf(risk_factor_nulls, locals())
 risk_factor_nulls_2_results = sql.sqldf(risk_factor_nulls_2, locals())
 
+### CHECK A DEPENDENCY ON CAR_AGE ###
+
+option_A = 'SELECT A, AVG(car_age) FROM train GROUP BY A'
+option_A_results = sql.sqldf(option_A, locals())
+
+option_A_age = 'SELECT A, AVG(age_oldest), AVG(age_youngest) FROM train GROUP BY A'
+option_A_age_results = sql.sqldf(option_A_age, locals())
+
+### CHECK MINIMUM AND MAXIMUM AGE ###
+
+hour_check = 'SELECT MAX(hour), MIN(hour) FROM train'
+print(sql.sqldf(hour_check, locals()))
+# Można dodać rozkłady wieku dla każdego A
+
 ### CHECK CORELATION BETWEEN RISK_FACTOR AND OTHER VARIABLES - HEATMAP ###
 
 corr = train.corr()
@@ -58,14 +77,15 @@ sns.heatmap(corr,
         xticklabels=corr.columns,
         yticklabels=corr.columns)
 
-abs(corr['risk_factor']).sort_values(ascending = False)
+abs(corr['risk_factor']).sort_values(ascending = False)[1:6]
+
 
 ### FEATURE ENGINEERING ###
 
 ### TIME OF DAY (0 - morning, 1 - afternoon, 2- evening)
 
 # Extract hour from Time variable and convert to int
-train['hour'] = train['time'].str.slice(start=0, stop = 2).astype('int') 
+train['hour'] = train['time'].str.slice(start=0, stop = 2).astype('int')  
 
 def time_of_day(row):
     if row['hour'] >= 6 and row['hour'] <= 11:
@@ -78,9 +98,6 @@ def time_of_day(row):
 
 train['time_of_day'] = train.apply(time_of_day, axis=1)
 
-hour_check = 'SELECT MAX(hour), MIN(hour) FROM train'
-print(sql.sqldf(hour_check, locals()))
-
 ### GROUP AGE DIFFERENCE (age_oldest - age_youngest)
 
 train['age_diff'] = train['age_oldest'] - train['age_youngest'] 
@@ -90,7 +107,28 @@ train['age_diff'] = train['age_oldest'] - train['age_youngest']
 train_dummy = pd.concat([train,pd.get_dummies(train['state'])],axis=1)
 del train_dummy['state']
 
+# Porobić grupowanie stanów 
 
+### RANDOM FOREST ATTEMPT ###
+
+from sklearn.preprocessing import StandardScaler
+
+# Feature Scaling
+sc = StandardScaler()
+X_train = sc.fit_transform(train)
+X_test = sc.transform(test)
+
+# Fitting Random Forest Classification to the Training set
+from sklearn.ensemble import RandomForestClassifier
+classifier = RandomForestClassifier(n_estimators = 500, criterion = 'entropy', random_state = 0)
+classifier.fit(X_train, y_train)
+
+# Predicting the Test set results
+y_pred = classifier.predict(X_test)
+
+# Making the Confusion Matrix
+from sklearn.metrics import confusion_matrix
+cm = confusion_matrix(y_test, y_pred)
 
 ### FILL NULLS IN RISK FACTOR COLUMN ###
 
@@ -98,37 +136,10 @@ del train_dummy['state']
 ### NOT USED ###
 ###############################################################################
 
-<<<<<<< HEAD
-
-## Dla kazdego klienta wyciagnij jego finalna polise ktora kupil (ostatni wiersz per klient)
-def klient(df):
-        
-    klient_zakup= pd.DataFrame()
     
-    Customers=list(set(df['customer_ID']))
-    
-    for i in Customers:
-        
-        cust=df.loc[df['customer_ID']==i,:][-1:]
-        
-        klient_zakup = klient_zakup.append(cust)
-        print('Dodawanie klienta numer: ',i)
-    
-=======
+'SELECT * FROM train INNER JOIN' +
+'(SELECT customer_ID, MAX(shopping_pt) FROM train GROUP BY customer_ID) AS Max_Order'  +
+'ON train.customer_ID = Max_Order.customerID AND train.shopping_pt = Max_Order.shopping_pt'
 
-# IS ACCEPTED (1 - offer has been accepted, 0 - not accepted yet)
-
-query_ao= 'SELECT customer_ID, MAX(shopping_pt) AS shopping_pt, 1 As IsAccepted FROM train GROUP BY customer_id'
-accepted_offers = sql.sqldf(query_ao, locals())
-
-train_dummy = train_dummy.merge(accepted_offers,
-                              indicator=True, # zakomentowac, zeby nie pojawialo sie _merge
-                              how='left',
-                              left_on=["customer_ID", "shopping_pt"],
-                              right_on=["customer_ID", "shopping_pt"])
-
-del train_dummy['_merge']
-train_dummy['IsAccepted'] = train_dummy['IsAccepted'].fillna(0)
->>>>>>> 25f53fdb4d28fa55c9b84a36b0e2a3cd59b358c9
 
   
