@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import pandas as pd, numpy as np, pandasql as sql, webbrowser as wbr, seaborn as sns
-import os
+import os, datetime
 
 ### KAGGLE + NOTES LINK ###
 wbr.open_new_tab('https://www.kaggle.com/c/allstate-purchase-prediction-challenge/data')
@@ -67,6 +67,11 @@ option_A_age_results = sql.sqldf(option_A_age, locals())
 
 hour_check = 'SELECT MAX(hour), MIN(hour) FROM train'
 print(sql.sqldf(hour_check, locals()))
+
+### CAR_VALUE VARIABLE VALUES ###
+car_value_check = 'SELECT DISTINCT car_value FROM train'
+print(sql.sqldf(car_value_check, locals()))
+
 # Można dodać rozkłady wieku dla każdego A
 
 ### CHECK CORELATION BETWEEN RISK_FACTOR AND OTHER VARIABLES - HEATMAP ###
@@ -78,6 +83,15 @@ sns.heatmap(corr,
         yticklabels=corr.columns)
 
 abs(corr['risk_factor']).sort_values(ascending = False)[1:6]
+
+### FILL NANs (NAIVE APPROACH - USE MEAN/MEDIAN))
+
+values = {'risk_factor': train['risk_factor'].median(), 
+          'C_previous': train['C_previous'].median(), 
+          'car_value_map': train['car_value_map'].median(), 
+          'duration_previous': train['duration_previous'].median()}
+
+train = train.fillna(value=values)
 
 
 ### FEATURE ENGINEERING ###
@@ -102,10 +116,19 @@ train['time_of_day'] = train.apply(time_of_day, axis=1)
 
 train['age_diff'] = train['age_oldest'] - train['age_youngest'] 
 
+### MAP CAR_VALUE VARIABLE ###
+
+car_value_dict = dict({'a':1, 'b':2, 'c':3, 'd':4, 'e':5, 'f':6, 'g':7, 'h':8,
+                      'i':9})
+
+train['car_value_map'] = train['car_value'].map(car_value_dict)
+
+del train['car_value']
 ### ENCODE 'STATE' VARIABLE END REMOVE IT FROM TRAINING SET ###
 
 train_dummy = pd.concat([train,pd.get_dummies(train['state'])],axis=1)
 del train_dummy['state']
+del train_dummy['time']
 
 # Porobić grupowanie stanów 
 
@@ -113,22 +136,76 @@ del train_dummy['state']
 
 from sklearn.preprocessing import StandardScaler
 
-# Feature Scaling
-sc = StandardScaler()
-X_train = sc.fit_transform(train)
-X_test = sc.transform(test)
+# Removing unnecessary variables #
 
-# Fitting Random Forest Classification to the Training set
+# Splitting the dataset into the Training set and Test set
+pred_columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+y_full = train_dummy[pred_columns]
+
+for column in pred_columns:
+    del train_dummy[column]
+
+from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-classifier = RandomForestClassifier(n_estimators = 500, criterion = 'entropy', random_state = 0)
-classifier.fit(X_train, y_train)
 
-# Predicting the Test set results
-y_pred = classifier.predict(X_test)
+full_predictions=pd.DataFrame(columns = pred_columns)
 
-# Making the Confusion Matrix
-from sklearn.metrics import confusion_matrix
-cm = confusion_matrix(y_test, y_pred)
+### Fitting Random Forest Classifier to each Insurance Option ###
+    
+iteration_count = 1
+
+started_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+print('Code execution started at: ' + started_time)
+
+for column in pred_columns:
+    
+    print('Iteration number ' + str(iteration_count) + ' has started for column: ' + column)
+    print('Start time: ' + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    y = y_full[column]
+    X_train, X_test, y_train, y_test = train_test_split(train_dummy, y, test_size = 0.25, random_state = 0)
+
+    # Feature Scaling
+    sc = StandardScaler()
+    X_train = sc.fit_transform(X_train)
+    X_test = sc.transform(X_test)
+
+    print ('Fitting the RFC classifier for column: ' + column)
+    
+    classifier = RandomForestClassifier(n_estimators = 30, criterion = 'entropy', random_state = 0)
+    classifier.fit(X_train, y_train)
+    
+    # Predicting the Test set results
+    y_pred = classifier.predict(X_test)
+    
+    # Making the Confusion Matrix
+    from sklearn.metrics import confusion_matrix
+    cm = confusion_matrix(y_test, y_pred)
+
+    print ('Confusion matrix for column: ' + column)
+    print(cm)
+
+    print('End time: ' + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+    # Policzyc procent trafionych prognoz per kazda zmienan 
+    
+full_predictions.dtypes
+
+full_predictions_str = full_predictions.astype('str')
+full_predictions_str['total'] = full_predictions_str[pred_columns].agg(''.join, axis=1)
+
+y_full_str = y_full.iloc[:166313,:].astype('str')
+y_full_str['total'] = y_full_str[pred_columns].agg(''.join, axis=1)
+
+i=0
+count_correct = 0
+
+for i in range(len(y_full_str)):
+    if y_full_str['total'][i] == full_predictions_str['total'][i]:
+        count_correct +=1
+    else:
+        if i % 100 == 0:
+            print('Iteration: ' + str(i))
+print(count_correct, ' correct predictions out of ', len(y_full_str))
 
 ### FILL NULLS IN RISK FACTOR COLUMN ###
 
@@ -136,10 +213,11 @@ cm = confusion_matrix(y_test, y_pred)
 ### NOT USED ###
 ###############################################################################
 
-    
-'SELECT * FROM train INNER JOIN' +
-'(SELECT customer_ID, MAX(shopping_pt) FROM train GROUP BY customer_ID) AS Max_Order'  +
-'ON train.customer_ID = Max_Order.customerID AND train.shopping_pt = Max_Order.shopping_pt'
 
+### CHECK NULLS BEFORE RUNNING RANDOM FOREST CLASSIFIER ###
+for i in X_train.columns:
+    print(str(i) +' ' +str(round(X_train[i].isnull().sum())))
 
-  
+array_sum = np.sum(X_train)
+array_has_nan = np.isnan(array_sum)
+
