@@ -28,8 +28,8 @@ imageio.plugins.ffmpeg.download()
 
 
 
-username = 'francesco686'
-pwd = 'Kochamzdjecia123'
+username = ''
+pwd = ''
 API = InstagramAPI(username,pwd)
 API.login()
 time.sleep(2)
