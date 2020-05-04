@@ -12,19 +12,20 @@ wbr.open_new_tab('https://docs.google.com/document/d/1c82cgdvH0DUGtxy-5OWSMhLfqC
 os.chdir('C://Users//Marek//Desktop//Python//Kaggle//AllState')
 
 ### IMPORT DATA ###
-
 train = pd.read_csv('train.csv')
 test = pd.read_csv('test_v2.csv')
 sample_submission = pd.read_csv('sampleSubmission.csv')
 
-### ACCEPTED OFFERS ###
-accepted_offers = train.loc[train['record_type']==1,:]
+### PRINT NULLS PERCENTAGE IN ALL COLUMNS FOR TRAIN AND TEST ###
 
-### PRINT NULLS PERCENTAGE IN ALL COLUMNS ###
+def null_summary(dataset):
 
-for i in train.columns:
-    print(i,round(train[i].isnull().sum()/len(train[i]),2)*100)
-    
+    for i in dataset.columns:
+        print(i,round(dataset[i].isnull().sum()/len(dataset[i]),2)*100)
+
+null_summary(train)
+null_summary(test)
+
 ### SQL CHECKS ###
 
 ### CHECK OF RANDOM CUSTOMERS ### 
@@ -72,27 +73,26 @@ print(sql.sqldf(hour_check, locals()))
 car_value_check = 'SELECT DISTINCT car_value FROM train'
 print(sql.sqldf(car_value_check, locals()))
 
+### CODE FOR GROUPPING STATES (NORTH/SOUTH/EAST/WEST) ###
+
+state_check = 'SELECT DISTINCT state FROM train'
+print(sql.sqldf(state_check, locals()))
+
 # Można dodać rozkłady wieku dla każdego A
 
 ### CHECK CORELATION BETWEEN RISK_FACTOR AND OTHER VARIABLES - HEATMAP ###
 
-corr = train.corr()
-
-sns.heatmap(corr, 
-        xticklabels=corr.columns,
-        yticklabels=corr.columns)
-
-abs(corr['risk_factor']).sort_values(ascending = False)[1:6]
-
-### FILL NANs (NAIVE APPROACH - USE MEAN/MEDIAN))
-
-values = {'risk_factor': train['risk_factor'].median(), 
-          'C_previous': train['C_previous'].median(), 
-          'car_value_map': train['car_value_map'].median(), 
-          'duration_previous': train['duration_previous'].median()}
-
-train = train.fillna(value=values)
-
+def heatmap_and_corr(dataset, column, top_correlations):
+    
+    corr = dataset.corr()
+    
+    sns.heatmap(corr, 
+            xticklabels=corr.columns,
+            yticklabels=corr.columns)
+    
+    print(abs(corr[column]).sort_values(ascending = False)[1:top_correlations + 1])
+    
+heatmap_and_corr(train, 'risk_factor', 10)
 
 ### FEATURE ENGINEERING ###
 
@@ -100,6 +100,7 @@ train = train.fillna(value=values)
 
 # Extract hour from Time variable and convert to int
 train['hour'] = train['time'].str.slice(start=0, stop = 2).astype('int')  
+test['hour'] = test['time'].str.slice(start=0, stop = 2).astype('int')
 
 def time_of_day(row):
     if row['hour'] >= 6 and row['hour'] <= 11:
@@ -111,10 +112,12 @@ def time_of_day(row):
     return val
 
 train['time_of_day'] = train.apply(time_of_day, axis=1)
+test['time_of_day'] = test.apply(time_of_day, axis=1)
 
 ### GROUP AGE DIFFERENCE (age_oldest - age_youngest)
 
 train['age_diff'] = train['age_oldest'] - train['age_youngest'] 
+test['age_diff'] = test['age_oldest'] - test['age_youngest'] 
 
 ### MAP CAR_VALUE VARIABLE ###
 
@@ -122,15 +125,59 @@ car_value_dict = dict({'a':1, 'b':2, 'c':3, 'd':4, 'e':5, 'f':6, 'g':7, 'h':8,
                       'i':9})
 
 train['car_value_map'] = train['car_value'].map(car_value_dict)
+test['car_value_map'] = test['car_value'].map(car_value_dict)
 
 del train['car_value']
-### ENCODE 'STATE' VARIABLE END REMOVE IT FROM TRAINING SET ###
+del test['car_value']
 
-train_dummy = pd.concat([train,pd.get_dummies(train['state'])],axis=1)
-del train_dummy['state']
+
+### MAP 'STATE' VARIABLE END REMOVE IT FROM TRAINING SET ###
+
+
+regions= {'West': ['WA', 'OR', 'CA', 'NV', 'ID', 'UT'],
+                  'North': ['MT', 'WY', 'ND', 'SD', 'NE', 'MN', 'IA', 'WI', 
+                            'IL', 'MI', 'IN', 'OH', 'PA', 'VT', 'MO',
+                            'KS', 'WI'],
+                  'South': ['AZ', 'NM', 'TX', 'OK', 'AR', 'LA', 
+                            'TN', 'MS', 'AL', 'GA', 'FL', 'CO'],
+                  'East': ['SC', 'NC', 'VA', 'WV', 'DC', 'MD', 'DE', 'NJ', 
+                           'CT', 'RI', 'MA', 'NH', 'ME', 'NY', 'ME', 'KY']}
+
+region_mapping = {}
+
+for keys, values in regions.items():
+    for value in values:
+        region_mapping[value] = keys
+
+train['US_Region'] = train['state'].map(region_mapping)
+test['US_Region'] = test['state'].map(region_mapping)
+
+del train['state']
+del test['state']
+
+train_dummy = pd.concat([train,pd.get_dummies(train['US_Region'])],axis=1)
+
+### SELECT ACCEPTED_OFFERS FOR TRAINING ONLY
+accepted_offers = train.loc[train['record_type']==1,:]
+accepted_train_dummy = pd.concat([accepted_offers,
+                                  pd.get_dummies(accepted_offers['US_Region'])],axis=1)
+    
 del train_dummy['time']
+del accepted_train_dummy['time']
 
-# Porobić grupowanie stanów 
+heatmap_and_corr(train_dummy, 'US_Region', 10)
+
+### FILL NANs (NAIVE APPROACH - USE MEAN/MEDIAN))
+
+values = {'risk_factor': train['risk_factor'].median(), 
+          'C_previous': train['C_previous'].median(), 
+          'car_value_map': train['car_value_map'].median(), 
+          'duration_previous': train['duration_previous'].median()}
+
+train_dummy = train_dummy.fillna(value=values)
+accepted_train_dummy = accepted_train_dummy.fillna(value=values)
+test_dummy = test.fillna(value=values)
+accepted_test_dummy = test_dummy.fillna(value=values)
 
 ### RANDOM FOREST ATTEMPT ###
 
@@ -140,10 +187,10 @@ from sklearn.preprocessing import StandardScaler
 
 # Splitting the dataset into the Training set and Test set
 pred_columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
-y_full = train_dummy[pred_columns]
+y_full = accepted_train_dummy[pred_columns]
 
 for column in pred_columns:
-    del train_dummy[column]
+    del accepted_train_dummy[column]
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
@@ -152,6 +199,7 @@ full_predictions=pd.DataFrame(columns = pred_columns)
 
 ### Fitting Random Forest Classifier to each Insurance Option ###
     
+accuracy_total = []
 iteration_count = 1
 
 started_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -162,7 +210,7 @@ for column in pred_columns:
     print('Iteration number ' + str(iteration_count) + ' has started for column: ' + column)
     print('Start time: ' + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     y = y_full[column]
-    X_train, X_test, y_train, y_test = train_test_split(train_dummy, y, test_size = 0.25, random_state = 0)
+    X_train, X_test, y_train, y_test = train_test_split(accepted_train_dummy, y, test_size = 0.25, random_state = 0)
 
     # Feature Scaling
     sc = StandardScaler()
@@ -171,7 +219,7 @@ for column in pred_columns:
 
     print ('Fitting the RFC classifier for column: ' + column)
     
-    classifier = RandomForestClassifier(n_estimators = 30, criterion = 'entropy', random_state = 0)
+    classifier = RandomForestClassifier(n_estimators = 100, criterion = 'entropy', random_state = 0)
     classifier.fit(X_train, y_train)
     
     # Predicting the Test set results
@@ -184,10 +232,23 @@ for column in pred_columns:
     print ('Confusion matrix for column: ' + column)
     print(cm)
 
+    hits = 0
+    
+    for i in range(len(cm)):
+        hits = hits + cm[i,i]
+    
+    attempts = sum(sum(cm))    
+    accuracy = round((hits/attempts*100),2)
+    accuracy_total.append(accuracy)
+    
+    print('Accuracy: ', accuracy, '%')
     print('End time: ' + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
 
-    # Policzyc procent trafionych prognoz per kazda zmienan 
-    
+sum(accuracy_total)/len(accuracy_total)
+## 30 -> 67.04
+## 50 -> 67.39
+## 100 -> 67.86
+null_summary(accepted_train_dummy)    
 full_predictions.dtypes
 
 full_predictions_str = full_predictions.astype('str')
