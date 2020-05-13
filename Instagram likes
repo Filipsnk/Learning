@@ -15,7 +15,7 @@ import numpy as np
 import time
 
 
-username = 'francesco686'
+username = ''
 pwd = 'xxx'
 API = InstagramAPI(username,pwd)
 API.login()
