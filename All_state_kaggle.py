@@ -26,58 +26,6 @@ def null_summary(dataset):
 null_summary(train)
 null_summary(test)
 
-### SQL CHECKS ###
-
-### CHECK OF RANDOM CUSTOMERS ### 
-
-query = 'select * from train where Customer_ID in (10015208,10015221,10015226,10015288)'
-customer_data = sql.sqldf(query, locals())
-
-### CHECK IF THE NUMBER OF STATES IS EQUAL BETWEEN TRAIN AND TEST ###
-
-query_1 = 'SELECT DISTINCT state FROM train'
-query_2 = 'SELECT DISTINCT state FROM test'
-
-distinct_states_train = sql.sqldf(query_1, locals())
-distinct_states_test = sql.sqldf(query_2, locals())
-
-check_1 = 'SELECT state FROM train WHERE state NOT IN (SELECT state FROM test)'
-check_1_result = sql.sqldf(check_1, locals())
-
-### CHECK HOW MANY NULLS ARE THERE IN RISK_FACTOR ###
-
-risk_nulls = 'SELECT COUNT(*) FROM train WHERE risk_factor is NULL'
-risk_nulls_result = sql.sqldf(risk_nulls, locals())
-
-### CHECK DEPENDENCY BETWEEN RISK_FACTOR AND AGE_OLDEST / YOUNGEST ###
-
-risk_factor_nulls = 'SELECT risk_factor, MAX(age_oldest), MIN(age_oldest), MAX(age_youngest), MIN(age_youngest) FROM train'
-risk_factor_nulls_2 = 'SELECT risk_factor, AVG(age_oldest), AVG(age_youngest) FROM train GROUP BY risk_factor'
-risk_factor_nulls_results = sql.sqldf(risk_factor_nulls, locals())
-risk_factor_nulls_2_results = sql.sqldf(risk_factor_nulls_2, locals())
-
-### CHECK A DEPENDENCY ON CAR_AGE ###
-
-option_A = 'SELECT A, AVG(car_age) FROM train GROUP BY A'
-option_A_results = sql.sqldf(option_A, locals())
-
-option_A_age = 'SELECT A, AVG(age_oldest), AVG(age_youngest) FROM train GROUP BY A'
-option_A_age_results = sql.sqldf(option_A_age, locals())
-
-### CHECK MINIMUM AND MAXIMUM AGE ###
-
-hour_check = 'SELECT MAX(hour), MIN(hour) FROM train'
-print(sql.sqldf(hour_check, locals()))
-
-### CAR_VALUE VARIABLE VALUES ###
-car_value_check = 'SELECT DISTINCT car_value FROM train'
-print(sql.sqldf(car_value_check, locals()))
-
-### CODE FOR GROUPPING STATES (NORTH/SOUTH/EAST/WEST) ###
-
-state_check = 'SELECT DISTINCT state FROM train'
-print(sql.sqldf(state_check, locals()))
-
 # Można dodać rozkłady wieku dla każdego A
 
 ### CHECK CORELATION BETWEEN RISK_FACTOR AND OTHER VARIABLES - HEATMAP ###
@@ -165,19 +113,19 @@ accepted_train_dummy = pd.concat([accepted_offers,
 del train_dummy['time']
 del accepted_train_dummy['time']
 
-heatmap_and_corr(train_dummy, 'US_Region', 10)
+heatmap_and_corr(train_dummy, 'East', 10)
 
-### FILL NANs (NAIVE APPROACH - USE MEAN/MEDIAN))
+### FILL NANs (NAIVE APPROACH - USE MEDIAN))
 
-values = {'risk_factor': train['risk_factor'].median(), 
+null_dict = {'risk_factor': train['risk_factor'].median(), 
           'C_previous': train['C_previous'].median(), 
           'car_value_map': train['car_value_map'].median(), 
           'duration_previous': train['duration_previous'].median()}
 
-train_dummy = train_dummy.fillna(value=values)
-accepted_train_dummy = accepted_train_dummy.fillna(value=values)
-test_dummy = test.fillna(value=values)
-accepted_test_dummy = test_dummy.fillna(value=values)
+train_dummy = train_dummy.fillna(value=null_dict)
+accepted_train_dummy = accepted_train_dummy.fillna(value=null_dict)
+test_dummy = test.fillna(value=null_dict)
+accepted_test_dummy = test_dummy.fillna(value=null_dict)
 
 ### RANDOM FOREST ATTEMPT ###
 
@@ -190,7 +138,11 @@ pred_columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
 y_full = accepted_train_dummy[pred_columns]
 
 for column in pred_columns:
-    del accepted_train_dummy[column]
+    del accepted_train_dummy[column] 
+
+del accepted_train_dummy['US_Region']
+del accepted_train_dummy['location']
+accepted_train_dummy = accepted_train_dummy.set_index(['customer_ID'])
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
@@ -219,7 +171,7 @@ for column in pred_columns:
 
     print ('Fitting the RFC classifier for column: ' + column)
     
-    classifier = RandomForestClassifier(n_estimators = 100, criterion = 'entropy', random_state = 0)
+    classifier = RandomForestClassifier(n_estimators = 30, criterion = 'entropy', random_state = 0)
     classifier.fit(X_train, y_train)
     
     # Predicting the Test set results
@@ -263,9 +215,9 @@ count_correct = 0
 for i in range(len(y_full_str)):
     if y_full_str['total'][i] == full_predictions_str['total'][i]:
         count_correct +=1
-    else:
-        if i % 100 == 0:
-            print('Iteration: ' + str(i))
+#    else:
+#        if i % 100 == 0:
+#            print('Iteration: ' + str(i))
 print(count_correct, ' correct predictions out of ', len(y_full_str))
 
 ### FILL NULLS IN RISK FACTOR COLUMN ###
