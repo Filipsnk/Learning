@@ -129,7 +129,12 @@ accepted_offers = train.loc[train['record_type']==1,:]
 accepted_train_dummy = pd.concat([accepted_offers,
                                   pd.get_dummies(accepted_offers['US_Region'])],axis=1)
 
+accepted_train_dummy = pd.concat([accepted_offers,
+                                  pd.get_dummies(accepted_offers['risk_factor'])],axis=1)
+
 del accepted_train_dummy['US_Region']
+del accepted_train_dummy['risk_factor'] ## probably needs to be dummy variable
+del accepted_train_dummy['shopping_pt']
 
 ### FILL NANs (NAIVE APPROACH - USE MEDIAN))
 
@@ -140,7 +145,7 @@ null_dict = {'risk_factor': train['risk_factor'].median(),
 
 accepted_train_dummy = accepted_train_dummy.fillna(value=null_dict)
 test_dummy = test.fillna(value=null_dict)
-accepted_test_dummy = test_dummy.fillna(value=null_dict)
+accepted_test_dummy = test_dummy.fillna(value=null_dict) ##!!## correct
 
 ### RANDOM FOREST ATTEMPT ###
 
@@ -170,7 +175,7 @@ mode = input('Choose 0 for standardization and 1 for normalization: ')
 no_of_trees = int(input('Choose how many trees should be built within RFC model:'))    
 accuracy_total = []
 iteration_count = 1
-
+iterations_rf = {}
 started_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 print('Code execution started at: ' + started_time)
 
@@ -226,7 +231,10 @@ for column in pred_columns:
     accepted_train_dummy[column] = y_pred_total
     accepted_train_dummy = pd.concat([accepted_train_dummy,
                                   pd.get_dummies(accepted_train_dummy[column])],axis=1)
-                      
+    # Append accuracy per column
+       
+    iterations_rf[column] = accuracy
+    
 sum(accuracy_total)/len(accuracy_total)
 
 # Convert full_predictions so that the values for each insurance option can be aggregated to one string
