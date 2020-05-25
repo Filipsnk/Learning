@@ -1,14 +1,24 @@
-## CODE CHANGE 
+### Define paths for proper runtime from beginning to end 
+
+modules_path_m = 'C://Users//Marek//Desktop//Python//FilipSNK'
+datasets_path_m = 'C://Users//Marek//Desktop//Python//Kaggle//AllState'
+
+#modules_path_f
+#datasets_path_f
 
 import pandas as pd, numpy as np, pandasql as sql, webbrowser as wbr, seaborn as sns
 import os, datetime
+
+os.chdir(modules_path_m)
+
+from flpmarlib import null_summary, heatmap_and_corr
 
 ### KAGGLE + NOTES LINK ###
 wbr.open_new_tab('https://www.kaggle.com/c/allstate-purchase-prediction-challenge/data')
 wbr.open_new_tab('https://docs.google.com/document/d/1c82cgdvH0DUGtxy-5OWSMhLfqCo5GkRDTo6OBk7NvwQ/edit')
 
 ### SET WORKING DIRECTORY ###
-os.chdir('C://Users//Marek//Desktop//Python//Kaggle//AllState')
+os.chdir(datasets_path_m)
 
 ### IMPORT DATA ###
 train = pd.read_csv('train.csv')
@@ -17,27 +27,12 @@ sample_submission = pd.read_csv('sampleSubmission.csv')
 
 ### PRINT NULLS PERCENTAGE IN ALL COLUMNS FOR TRAIN AND TEST ###
 
-def null_summary(dataset):
-
-    for i in dataset.columns:
-        print(i,round(dataset[i].isnull().sum()/len(dataset[i]),2)*100)
-
 null_summary(train)
 null_summary(test)
 
 # Można dodać rozkłady wieku dla każdego A
 
 ### CHECK CORELATION BETWEEN RISK_FACTOR AND OTHER VARIABLES - HEATMAP ###
-
-def heatmap_and_corr(dataset, column, top_correlations):
-    
-    corr = dataset.corr()
-    
-    sns.heatmap(corr, 
-            xticklabels=corr.columns,
-            yticklabels=corr.columns)
-    
-    print(abs(corr[column]).sort_values(ascending = False)[1:top_correlations + 1])
     
 heatmap_and_corr(train, 'risk_factor', 10)
 
@@ -49,15 +44,6 @@ heatmap_and_corr(train, 'risk_factor', 10)
 train['hour'] = train['time'].str.slice(start=0, stop = 2).astype('int')  
 test['hour'] = test['time'].str.slice(start=0, stop = 2).astype('int')
 
-def time_of_day(row): ##!!## needs one-hot encode
-    if row['hour'] >= 6 and row['hour'] <= 11:
-        val = 0
-    elif row['hour'] >= 12 and row['hour'] <= 19:
-        val = 1
-    else:
-        val = 2
-    return val
-
 train['time_of_day'] = train.apply(time_of_day, axis=1)
 test['time_of_day'] = test.apply(time_of_day, axis=1)
 
@@ -68,13 +54,6 @@ del train['time']
 del test['time']
 
 ### IsWeekend 0 - weekday, 1 - weekend
-
-def is_weekend(row): ##needs one-hot encode
-    if row['day'] >= 0 and row['day'] <= 4:
-        val = 0
-    else:
-        val = 1
-    return val
 
 train['is_weekend'] = train.apply(is_weekend, axis=1)
 test['is_weekend'] = test.apply(is_weekend, axis=1)
@@ -241,103 +220,31 @@ sum(accuracy_total)/len(accuracy_total)
 
 full_predictions_str = full_predictions.astype('str')
 full_predictions_str['total'] = full_predictions_str[pred_columns].agg(''.join, axis=1)
-
-<<<<<<< HEAD
   
 ========= DATA PREP   
 
 ## Functions
 
-def detect_outliers(df,columns):
-    
-    clean_df = df
-    
-    try:
-    
-        for col in columns:
-                        
-            first_quartile = clean_df[col].quantile(0.25)
-            third_quartile = clean_df[col].quantile(0.75)
-            
-            IQR = third_quartile-first_quartile
-            
-            indx = clean_df[(clean_df[col] < (third_quartile+IQR*1.5))  &  (clean_df[col]>(first_quartile-IQR*1.5))].index
-    
-            diff = clean_df.shape[0]-indx.shape[0]
-    
-            print('In column: {} there are {} observations to be deleted'.format(col,diff))
-            
-            clean_df = clean_df.iloc[indx].copy().reset_index()
-            
-            del clean_df['index']
-            
-        return clean_df
-    
-    except:
-        print('Check data types of columns')
-        
-        
-
-def elbow_method (df,no_clusters):
-
-
-    distance = []
-    
-    for i in range(1,no_clusters):
-        
-        km = KMeans(n_clusters = i
-                    ,init='random'
-                    ,n_init=10
-                    ,max_iter=300
-                    ,random_state =0)
-        
-        model = km.fit(df)
-        
-        distance.append(km.inertia_)
-    
-    plt.plot(range(1,no_clusters),distance,marker = 'o')
-    plt.xlabel('Number of clusters')
-    plt.ylabel('Distances')
-    plt.show()            
-
-
-
-def check_distribution (data,columns):
-            
-    for i in data[columns].columns:
-            
-        print('\t\t\nHistogram for column: {}'.format(i))
-            
-        data[i].hist(bins=50)
-        
-        plt.show()
-
-
 # get data
 data = pd.read_csv('train.csv')
-
 
 #Select the last row for each customer. When customer boughted final product
 new_data = data.loc[data['record_type']==1,:].reset_index()
 
 # How many missing values
 
-for i in new_data.columns:
-    
+for i in new_data.columns:    
     print('There is {} missing values in column {}'.format(new_data[i].isnull().sum(),i))
 
 # correlations
 
 corr = new_data.corr()
 
-
 # Sum costs per customer as attribute for clustering
 spend = pd.DataFrame(data.groupby(['customer_ID'])['cost'].mean().reset_index())
 
 # Combine two datasets. Optional
-
 #new_data = new_data.merge(spend,on='customer_ID')
-
 ### Analysis of costs in order to define car value
 
 median= new_data['cost'].median()
@@ -346,14 +253,12 @@ new_data['cost_label'] = new_data['cost'].apply(lambda x: 1 if x > median else 0
 cost_above = new_data.loc[new_data['cost_label']==1 ,['car_value']]
 cost_below = new_data.loc[new_data['cost_label']==0 ,['car_value']]
 
-
 y_1 = [y_1 for _,y_1 in enumerate(cost_above['car_value'].value_counts().sort_index())]
 x_1 = np.arange(1,10)
 xticks = cost_above['car_value'].value_counts().sort_index().keys().tolist()
 
 y_2 = [y_2 for _,y_2 in enumerate(cost_below['car_value'].value_counts().sort_index())]
 x_2 = np.arange(1,10)
-
 
 fig = plt.figure()
 fig, axs = plt.subplots(1,1,figsize=(10,8))
@@ -364,7 +269,6 @@ plt.xlabel('car_value')
 plt.ylabel('count')
 plt.legend()
 plt.show()
-
 
 ### Preparing data for k-means clustering
 
@@ -394,7 +298,6 @@ new_data.groupby(['option_q'])['risk_factor'].value_counts()
 # For each option_q and select the most frequent risk_factor
 
 risk_mode = new_data.groupby(['option_q']).apply(lambda x: x['risk_factor'].value_counts().index[0]).to_dict()
-
 final_data = new_data.copy()
 
 # Fill in missing values based on the above.
@@ -411,7 +314,6 @@ for i in final_data.columns:
     
 final_data = final_data.fillna(method ='pad')
 
-
 ### Optional ### 
 ### MinMax to standarize data
 
@@ -420,19 +322,14 @@ scaler=MinMaxScaler()
 ### Columns for clustering
 
 columns = ['cost','car_value_2']
-
 clustered_data = new_data[columns]
-
-
 clustered_data = scaler.fit_transform(clustered_data)
 
 ### Plot of data
 plt.scatter(clustered_data[:,1],clustered_data[:,0])
 
-=======
 y_full_str = y_full.astype('str')
 y_full_str['total'] = y_full_str[pred_columns].agg(''.join, axis=1)
-
 y_full_str = y_full_str.reset_index()
 
 # Calculate number correct predictions 
@@ -448,9 +345,8 @@ for i in range(len(y_full_str)): ##!!## sprawdzic czemu nie dziala
 #            print('Iteration: ' + str(i))
 print(count_correct, ' correct predictions out of ', len(y_full_str))
 
-### FILL NULLS IN RISK FACTOR COLUMN ###
+
 
 ###############################################################################
 ### NOT USED ###
 ###############################################################################
->>>>>>> fd1d4a44b94239f2bb1565ce21f6c8713cdc8e10
