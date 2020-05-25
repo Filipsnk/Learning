@@ -1,15 +1,7 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Mar 13 07:49:28 2020
 
-@author: Filip.Fraczek
-"""
-
-# -*- coding: utf-8 -*-
 """
 Created on Wed Mar 11 09:32:47 2020
 
-@author: Filip.Fraczek
 """
 
 import pandas as pd
@@ -98,8 +90,8 @@ Pred = W.dot(H)
 
 
 def rmse(pred, actual):
-    pred = pred[actual.nonzero()].flatten()     # Ignore nonzero terms
-    actual = actual[actual.nonzero()].flatten() # Ignore nonzero terms
+    pred = pred[actual.nonzero()].flatten()     
+    actual = actual[actual.nonzero()].flatten() 
     return mean_squared_error(pred, actual,squared = False)
 
 
@@ -157,10 +149,6 @@ for train_index, test_index in model_2.split(X):
     R_pred = M.dot(Theta.T)
     R_pred = R_pred.T      
     
-    # Clipping values                                                    
-    #R_pred[R_pred > 5] = 5.           # clips ratings above 5             
-    #R_pred[R_pred < 1] = 1.           # clips ratings below 1
-
     # Computing the error on the validation set 
     err += get_rmse(R_pred, R_test)
     print (get_rmse(R_pred, R_test))
@@ -245,7 +233,6 @@ best_params = grid_search.sort_values('RMSE')[:1]
 print ('*** best params ***')
 print (best_params)
 
-########### Grid search
 
 
 
