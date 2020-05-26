@@ -26,6 +26,8 @@ for column in full_predictions.columns:
     model = models.Sequential()
     model.add(layers.Dense(128, activation = 'relu', input_shape = (18,)))
     model.add(layers.Dense(128, activation = 'relu'))
+    model.add(layers.Dense(128, activation = 'relu'))
+    model.add(layers.Dense(128, activation = 'relu'))
     model.add(layers.Dense(128, activation = 'relu')) # Third hidden layer
     model.add(layers.Dense(no_of_categories,activation = 'softmax'))
     model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
@@ -41,3 +43,44 @@ for column in full_predictions.columns:
     
 print(iterations_rnn)
 print(iterations_rf)
+
+iterations_rnn_five_layers = iterations_rnn
+
+iterations_rnn_standarization = iterations_rnn
+iterations_rnn_normalization = iterations_rnn
+
+print(iterations_rnn_normalization)
+print(iterations_rnn_standarization)
+
+mean_accuracy(iterations_rnn_five_layers)
+
+def mean_accuracy(dataset):
+
+    avg_accuracy = 0
+    
+    for acc in dataset.values():
+        avg_accuracy = avg_accuracy + acc
+    
+    avg_accuracy = avg_accuracy / len(dataset.values())
+    
+    print(avg_accuracy)
+
+## normalization - 60,34%
+## standarization - 59,94%
+## five layers - 60,55%
+
+### 
+
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.ensemble import GradientBoostingClassifier
+from numpy import mean, std
+
+y = y_full['A']
+model = GradientBoostingClassifier()
+# evaluate the model
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+n_scores = cross_val_score(model, accepted_train_dummy, y, scoring='accuracy', cv=cv, n_jobs=-1, error_score='raise')
+# report performance
+print('Accuracy: %.3f (%.3f)' % (mean(n_scores), std(n_scores)))
