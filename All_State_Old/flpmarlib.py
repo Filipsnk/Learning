@@ -4,9 +4,7 @@
 ### to provide insight for its distribution
 
 def check_distribution (data,columns):
-    
-    import matplotlib.pyplot as plt 
-    
+            
     for i in data[columns].columns:            
         print('\t\t\nHistogram for column: {}'.format(i))            
         data[i].hist(bins=50)        
@@ -47,13 +45,6 @@ def detect_outliers(df,columns):
 ### CHECK - Function takes dataset and number of clusters as input and returns plot
 ### that allows to choose the correct number of clusters
 
-def df_cleanup(dataset,columns):
-    for column in columns:
-        try:
-            del dataset[column]
-        except KeyError:
-            pass
-        
 def elbow_method (df,no_clusters):
 
     import matplotlib.pyplot as plt
@@ -82,8 +73,6 @@ def elbow_method (df,no_clusters):
 
 def heatmap_and_corr(dataset, column, top_correlations):
     
-    import seaborn as sns
-    
     corr = dataset.corr()
     
     sns.heatmap(corr, 
@@ -102,30 +91,6 @@ def is_weekend(row): ##needs one-hot encode
         val = 1
     return val
 
-### Function takes as input the two-letter codes and assigns the geographical
-### region in US. Input variables are the dataset (train, test) and pd_df_column
-### which contains the encoded state variable
-
-def map_us_region(dataset, pd_df_column):
-
-    regions= {'West': ['WA', 'OR', 'CA', 'NV', 'ID', 'UT'],
-                      'North': ['MT', 'WY', 'ND', 'SD', 'NE', 'MN', 'IA', 'WI', 
-                                'IL', 'MI', 'IN', 'OH', 'PA', 'VT', 'MO',
-                                'KS', 'WI'],
-                      'South': ['AZ', 'NM', 'TX', 'OK', 'AR', 'LA', 
-                                'TN', 'MS', 'AL', 'GA', 'FL', 'CO'],
-                      'East': ['SC', 'NC', 'VA', 'WV', 'DC', 'MD', 'DE', 'NJ', 
-                               'CT', 'RI', 'MA', 'NH', 'ME', 'NY', 'ME', 'KY']}
-    
-    region_mapping = {}
-    
-    for keys, values in regions.items():
-        for value in values:
-            region_mapping[value] = keys
-
-    dataset['US_Region'] = dataset[pd_df_column].map(region_mapping)
-    del dataset['state']
-
 ### Function takes pandas Dataframe as input and returns
 ### summary how many percent of all columns are NULL
 
@@ -134,53 +99,6 @@ def null_summary(dataset):
     for i in dataset.columns:
         print(i,round(dataset[i].isnull().sum()/len(dataset[i]),2)*100)
 
-### Function takes pandas DataFrame as input and reduces the memory usage by 
-### reducing the size of inf/float size 
-
-def reduce_memory_usage(df, verbose = True):  
-    
-    import numpy as np
-    
-    memory_old = df.memory_usage().sum()/1024**2
-    
-    num = ['int16', 'int32', 'int8', 'float16', ' float32', ]
-    
-    for i in df.columns:
-        
-        if str(df[i].dtype)[:3] == 'int':
-            if np.abs(df[i]).max() <= np.iinfo(np.int8).max:
-                df[i] = df[i].astype(np.int8)
-            elif np.abs(df[i]).max() <= np.iinfo(np.int16).max:
-                df[i] = df[i].astype(np.int16)
-            elif np.abs(df[i]).max() <= np.iinfo(np.int32).max:
-                df[i] = df[i].astype(np.int32)
-                
-        if str(df[i].dtype)[:5] == 'float':
-            if np.abs(df[i]).max() <= np.finfo(np.float16).max:
-                df[i] = df[i].astype(np.float16)
-            elif np.abs(df[i]).max() <= np.finfo(np.float32).max:
-                df[i] = df[i].astype(np.float32)
-
-    memory_new = df.memory_usage().sum()/1024**2
-    if verbose == True:
-        print('Memory usage before: {:5.2f} MB\nMemory usage after: {:5.2f} MB\nMemory usage decreasing: {:5.2f} %\n'.\
-              format(memory_old,memory_new, (memory_old-memory_new)*100/memory_old))
-    
-    
-    return df
-
-
-### Function takes as input list of objects that are not needed at some point and
-### removes them
-    
-def remove_objects(objects):
-    for element in objects:
-        try:
-            exec('del ' + element)
-        except:
-            pass
-
-        
 ### Function takes hour (integer) as input and returns time of day using rules:
 ### Morning [0] - from 6 to 11, Afternoon [1] - from 12 to 19, 
 ### Evening [2] - from 20 to 5
