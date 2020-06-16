@@ -54,6 +54,19 @@ def df_cleanup(dataset,columns):
         except KeyError:
             pass
         
+### Function takes a dataset, a list of columns that should be 'dummified', 
+###'dummifies' this column and removes it in the end
+            
+def dummify_dataset(dataset, columns):
+    
+    import pandas as pd
+    
+    for column in columns:
+        dataset = pd.concat([dataset, pd.get_dummies(dataset[column])],axis=1)    
+        del dataset[column]
+    
+    return dataset
+
 def elbow_method (df,no_clusters):
 
     import matplotlib.pyplot as plt

@@ -12,7 +12,7 @@ datasets_path_m1 = '//Users//marekpytka//Documents//Programowanie//AllState'
 import pandas as pd, numpy as np, pandasql as sql, webbrowser as wbr, seaborn as sns
 import os, datetime
 
-os.chdir(modules_path_m1)
+os.chdir(modules_path_m)
 
 from flpmarlib import *
 #!#from flpmarlib import (null_summary, heatmap_and_corr, time_of_day, is_weekend,
@@ -24,7 +24,7 @@ wbr.open_new_tab('https://docs.google.com/document/d/1c82cgdvH0DUGtxy-5OWSMhLfqC
 wbr.open_new_tab('https://towardsdatascience.com/hyperparameter-tuning-the-random-forest-in-python-using-scikit-learn-28d2aa77dd74')
 
 ### SET WORKING DIRECTORY ###
-os.chdir(datasets_path_m1)
+os.chdir(datasets_path_m)
 
 ### IMPORT DATA ###
 train = pd.read_csv('train.csv')
@@ -112,23 +112,10 @@ accepted_offers = train.loc[train['record_type']==1,:]
 accepted_offers_test = test.loc[test['record_type']==1,:]
 
 ### BUILD DUMMIES FROM US_REGION, RISK_FACTOR, CAR_VALUE
-accepted_train_dummy = pd.concat([accepted_offers,
-                                  pd.get_dummies(accepted_offers['US_Region'])],axis=1)
 
-accepted_train_dummy = pd.concat([accepted_offers,
-                                  pd.get_dummies(accepted_offers['risk_factor'])],axis=1)
-
-accepted_train_dummy = pd.concat([accepted_offers,
-                                  pd.get_dummies(accepted_offers['car_value_map'])],axis=1)
-
-accepted_test_dummy = pd.concat([accepted_offers_test,
-                                  pd.get_dummies(accepted_offers_test['US_Region'])],axis=1)
-
-accepted_test_dummy = pd.concat([accepted_offers,
-                                  pd.get_dummies(accepted_offers_test['risk_factor'])],axis=1)
-
-accepted_test_dummy = pd.concat([accepted_offers,
-                                  pd.get_dummies(accepted_offers_test['car_value_map'])],axis=1)
+columns = ['US_Region', 'risk_factor', 'car_value_map']
+accepted_train_dummy = dummify_dataset(accepted_offers, columns)
+accepted_test_dummy = dummify_dataset(accepted_offers_test, columns)
 
 ### CLEANUP OF UNNECESSARY COLUMNS
 
@@ -159,22 +146,9 @@ accepted_test_dummy = accepted_test_dummy.fillna(value=null_dict)
 reduce_memory_usage(accepted_train_dummy, verbose=True)
 reduce_memory_usage(accepted_test_dummy, verbose=True) 
 
-### RANDOM FOREST ATTEMPT ###
-
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-
-# Preparation of prediction dataframe, where output of each prediction vector
-# will be appended to
-
-pred_columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
-ordered_columns = ['C', 'A', 'E', 'D', 'B', 'F', 'G'] ## ordered desceding via 
-                                                      ## accuracy in first turn
-
-y_full = accepted_train_dummy[pred_columns] # our equivalent of y_test
-
 # Clean accepted_train_dummy from columns that we'd like to predict 
+
+ordered_columns = ['C', 'A', 'E', 'D', 'B', 'F', 'G'] ## ordered desceding via 
 
 df_cleanup(accepted_train_dummy, ordered_columns)
 df_cleanup(accepted_test_dummy, ordered_columns)
@@ -186,7 +160,6 @@ accepted_test_dummy = accepted_test_dummy.set_index(['customer_ID'])
 
 accepted_train_dummy.to_csv('accepted_train_dummy.csv')
 accepted_test_dummy.to_csv('accepted_test_dummy.csv')
-
 
 ###############################################################################
 ### NOT USED ###

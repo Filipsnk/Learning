@@ -1,3 +1,32 @@
+### Import dataset from ASK_Dataset file
+
+import pandas as pd
+import os
+
+modules_path_m = 'C://Users//Marek//Desktop//Python//FilipSNK'
+datasets_path_m = 'C://Users//Marek//Desktop//Python//Kaggle//AllState'
+
+os.chdir(datasets_path_m)
+
+accepted_train_dummy = pd.read_csv('accepted_train_dummy.csv')
+accepted_test_dummy = pd.read_csv('accepted_test_dummy.csv')
+
+
+### RANDOM FOREST ATTEMPT ###
+
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+
+# Preparation of prediction dataframe, where output of each prediction vector
+# will be appended to
+
+pred_columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+ordered_columns = ['C', 'A', 'E', 'D', 'B', 'F', 'G'] ## ordered desceding via 
+                                                      ## accuracy in first turn
+
+y_full = accepted_train_dummy[pred_columns] # our equivalent of y_test
+
 ### Prepare dataset for modelling ###
 
 full_predictions=pd.DataFrame(columns = pred_columns) # our equivalent of y_pred
