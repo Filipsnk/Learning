@@ -36,7 +36,6 @@ sample_submission = pd.read_csv('sampleSubmission.csv')
 null_summary(train)
 null_summary(test)
 
-# Można dodać rozkłady wieku dla każdego A
 
 ### CHECK CORELATION BETWEEN RISK_FACTOR AND OTHER VARIABLES - HEATMAP ###
     
@@ -107,6 +106,16 @@ test['car_value_map'] = test['car_value'].map(car_value_dict)
 map_us_region(train, 'state')
 map_us_region(test, 'state')
 
+### FILL NANs (NAIVE APPROACH - USE MEDIAN))
+
+null_dict = {'risk_factor': train['risk_factor'].median(), 
+          'C_previous': train['C_previous'].median(), 
+          'car_value_map': train['car_value_map'].median(), 
+          'duration_previous': train['duration_previous'].median()}
+
+train = train.fillna(value=null_dict)
+train = train.fillna(value=null_dict)
+
 ### SELECT ACCEPTED_OFFERS FOR TRAINING ONLY
 accepted_offers = train.loc[train['record_type']==1,:]
 accepted_offers_test = test.loc[test['record_type']==1,:]
@@ -126,32 +135,25 @@ deleted_columns = ['car_value', 'day', 'hour', 'time', 'state', 'shopping_pt',
 df_cleanup(accepted_train_dummy, deleted_columns)
 df_cleanup(accepted_test_dummy, deleted_columns)
 
+### RENAME COLUMNS FOR DUMMIES OF RISK_FACTOR AND CAR_VALUE
+
+accepted_train_dummy.columns = ['customer_ID', 'group_size', 'homeowner', 'car_age', 
+                                'age_oldest','age_youngest', 'married_couple', 'C_previous', 
+                                'duration_previous', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'cost', 
+                                'no_of_offers', 'avg_cost', 'time_of_day', 'is_weekend', 
+                                'age_diff', 'East', 'North', 'South', 'West', 'rf_1', 
+                                'rf_2', 'rf_3', 'rf_4', 'cv_1', 'cv_2', 'cv_3', 'cv_4',
+                                'cv_5', 'cv_6', 'cv_7', 'cv_8', 'cv_9']
+
 ### CLEANUP OF UNNECESSARY OBJECTS
 
 objects = ['costs_groupby', 'offers_groupby']
 remove_objects(objects)
 
-### FILL NANs (NAIVE APPROACH - USE MEDIAN))
-
-null_dict = {'risk_factor': train['risk_factor'].median(), 
-          'C_previous': train['C_previous'].median(), 
-          'car_value_map': train['car_value_map'].median(), 
-          'duration_previous': train['duration_previous'].median()}
-
-accepted_train_dummy = accepted_train_dummy.fillna(value=null_dict)
-accepted_test_dummy = accepted_test_dummy.fillna(value=null_dict)
-
 ### CLEANUP OF MEMORY USAGE
 
 reduce_memory_usage(accepted_train_dummy, verbose=True)
 reduce_memory_usage(accepted_test_dummy, verbose=True) 
-
-# Clean accepted_train_dummy from columns that we'd like to predict 
-
-ordered_columns = ['C', 'A', 'E', 'D', 'B', 'F', 'G'] ## ordered desceding via 
-
-df_cleanup(accepted_train_dummy, ordered_columns)
-df_cleanup(accepted_test_dummy, ordered_columns)
 
 # Set index of customer_ID 
     
@@ -161,6 +163,8 @@ accepted_test_dummy = accepted_test_dummy.set_index(['customer_ID'])
 accepted_train_dummy.to_csv('accepted_train_dummy.csv')
 accepted_test_dummy.to_csv('accepted_test_dummy.csv')
 
+
+print('Training dataset generation finished succesfully')
 ###############################################################################
 ### NOT USED ###
 ###############################################################################
