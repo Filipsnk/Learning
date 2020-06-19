@@ -71,7 +71,7 @@ df_cleanup(accepted_test_dummy, ordered_columns)
 mode = input('Choose 0 for standardization and 1 for normalization: ')
 grid_search = input('Choose if you want to tune algorithm via grid search (0 - no, 1 - yes): ')
 
-if grid_search == 0:
+if grid_search == '0':
     no_of_trees = int(input('Choose how many trees should be built within RFC model: '))  
   
 accuracy_total = []
@@ -99,14 +99,14 @@ for column in ordered_columns:
     X_test = sc.transform(X_test)
 
     print ('Fitting the RFC classifier for column: ' + column)
-    
-    if grid_search == 0:    
+  
+    if grid_search == '0':    
         classifier = RandomForestClassifier(n_estimators = no_of_trees, 
                                             criterion = 'entropy', 
                                             random_state = 0)
         classifier.fit(X_train, y_train)
-    else:
-        
+
+    elif grid_search == '1': 
         classifier = RandomizedSearchCV(estimator = rf, param_distributions = random_grid, 
                                     n_iter = 100, cv = 3, verbose=2, 
                                     random_state=42, n_jobs = -1)
