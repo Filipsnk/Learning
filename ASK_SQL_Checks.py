@@ -50,3 +50,23 @@ print(sql.sqldf(car_value_check, locals()))
 
 state_check = 'SELECT DISTINCT state FROM train'
 print(sql.sqldf(state_check, locals()))
+
+### CORRELATIONS BETWEEN INSURANCE OFFERS FOR DEFINING SOME RULES, FOR EXAMPLE
+### IF A == 1, THEN B == 2 ETC.
+
+columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+insurance_corr = train[columns].corr()
+sns.heatmap(insurance_corr)
+
+# Most important pairs are: C-D (0,64); A-F (0,53) and B-E (0,46)
+
+pd.crosstab(train['C'],train['D'],margins = False) # if C == 3 -> D == 3
+pd.crosstab(train['A'],train['F'],margins = False) # if A == 0 -> F == 0
+pd.crosstab(train['B'],train['E'],margins = False) # if B == 0 -> E == 0
+                                                   # if B == 1 -> E == 1
+# Some random attempts
+pd.crosstab(train['A'],train['E'],margins = False) # if A == 0 -> E == 0
+ref_column = 'G'
+for col in columns:
+    print(col + ' vs. column {}'.format(ref_column))
+    print(pd.crosstab(train[col],train[ref_column],margins = False).apply(lambda r: r/r.sum(), axis=1).max().max())
