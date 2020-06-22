@@ -12,6 +12,67 @@ def check_distribution (data,columns):
         data[i].hist(bins=50)        
         plt.show()
 
+### Function takes dataset and returns pd.Dataframe summary which shows:
+# not more than 5 examples of a variable
+# counter of distinct values, 
+# minimum and maximum value,
+# percentage of NULL values,
+# name of most correlated variable and correlation strength
+# counter of outliers (calculated by abs(z-score) > 3 )
+        
+def dataset_summary(dataset): 
+    
+    import pandasql as sql, pandas as pd
+    import datetime
+    from scipy import stats
+    
+    corr = dataset.corr()
+    
+    i = 0    
+    dataset_summary = pd.DataFrame(columns = ['field_name', 'examples', 'no_of_distinct_values',
+                                              'min', 'max', 'null_percentage', 'most_correlated',
+                                              'correlation_value', 'no_of_outliers'])
+        
+    started_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print('Code execution started at: ' + started_time)
+
+    print('Total number of columns: ' + str(len(dataset.columns)))
+    for column in dataset.columns:
+            print('Progress: ' + str(i) + ' out of ' + str(len(dataset.columns)) + ' columns')
+
+            query = 'SELECT DISTINCT {} FROM accepted_train_dummy'.format(column)
+            query_2 = 'SELECT MIN({0}), MAX({0}) FROM accepted_train_dummy'.format(column)
+            query_3 = 'SELECT (100 - (COUNT({})/COUNT(*)) * 100) FROM accepted_train_dummy'.format(column)
+    
+            examples = list(sql.sqldf(query, locals())[column])
+            no_of_distinct_values = len(examples)        
+            if len(examples) >= 5:
+                examples = examples[:5]
+                
+            min_value =  sql.sqldf(query_2, locals()).iloc[0,0]
+            max_value = sql.sqldf(query_2, locals()).iloc[0,1]
+            null_percentage = sql.sqldf(query_3, locals()).iloc[0,0]
+            
+            most_correlated = abs(corr[column]).sort_values(ascending = False).index[1]
+            correlation_value = abs(corr[column]).sort_values(ascending = False)[1]
+            
+            z = np.abs(stats.zscore(dataset[column]))
+            no_of_outliers = len(np.where(z>3)[0])
+
+            row = [column, examples, no_of_distinct_values, min_value, 
+                   max_value, null_percentage, most_correlated, correlation_value,
+                   no_of_outliers]
+            
+            dataset_summary.append(row)
+            row = pd.Series(row, index = dataset_summary.columns)
+            dataset_summary = dataset_summary.append(row, ignore_index=True)
+            i += 1 
+            
+    end_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print('Code ended at: ' + end_time)
+
+    return dataset_summary
+
 ### Function takes dataset as an input and returns information about number of 
 ### outliers as well as remomves all of the outliers available in predefined
 ### set of columns
