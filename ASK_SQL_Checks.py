@@ -66,7 +66,17 @@ pd.crosstab(train['B'],train['E'],margins = False) # if B == 0 -> E == 0
                                                    # if B == 1 -> E == 1
 # Some random attempts
 pd.crosstab(train['A'],train['E'],margins = False) # if A == 0 -> E == 0
+
 ref_column = 'G'
+
 for col in columns:
     print(col + ' vs. column {}'.format(ref_column))
     print(pd.crosstab(train[col],train[ref_column],margins = False).apply(lambda r: r/r.sum(), axis=1).max().max())
+
+print(pd.crosstab(train[col],train[ref_column],margins = False).apply(lambda r: r/r.sum(), axis=1).max().max())
+    
+overrides = pd.DataFrame(columns = ['column_from', 'from_value', 'column_to',
+                                    'to_value'])
+
+overrides_lists = [['C', 3, 'D', 3], ['A', 0, 'F', 0], ['B', 0, 'E', 0], 
+                   ['B', 1, 'E', 1], ['A', 0, 'E', 0]]

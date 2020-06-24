@@ -151,6 +151,16 @@ for column in ordered_columns:
     
 sum(accuracy_total)/len(accuracy_total)
 
+# Apply overrides generated in ASK_SQL_Checks
+
+def apply_overrides():
+    
+    for rule in overrides_lists:
+        mask = (full_predictions[rule[0]] == rule[1]) 
+        full_predictions[rule[2]][mask] = rule[3]
+
+apply_overrides()        
+         
 # Convert full_predictions so that the values for each insurance option can be aggregated to one string
 
 full_predictions_str = full_predictions.astype('str')
@@ -159,7 +169,6 @@ full_predictions_str['total'] = full_predictions_str[pred_columns].agg(''.join, 
 y_full_str = y_full.astype('str')
 y_full_str['total'] = y_full_str[pred_columns].agg(''.join, axis=1)
 y_full_str = y_full_str.reset_index()
-
 
 i=0
 count_correct = 0
@@ -170,3 +179,4 @@ for i in range(len(y_full_str)):
 
 print(count_correct, ' correct predictions out of ', len(y_full_str))
   
+### Using overrides increased for 150 trees correct predictions from 587 to 687
